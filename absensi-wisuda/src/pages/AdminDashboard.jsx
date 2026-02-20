@@ -9,7 +9,7 @@ export default function AdminDashboard() {
     "Data Undangan",
     "Data Mahasiswa",
     "Data Event",
-    "Riwayat Absensi",
+
   ];
 
   return (
