@@ -1,10 +1,20 @@
 import { useLocation } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
+import { useEffect } from "react";
 import bg from "../assets/Gedung.jpg";
 
 function Barcode() {
     const location = useLocation();
     const { nama, nim } = location.state || {};
+
+    // call hook unconditionally (avoid conditional hooks error)
+    useEffect(() => {
+        try {
+            if (nama && nim) {
+                localStorage.setItem('lastGeneratedQr', JSON.stringify({ nama, nim }));
+            }
+        } catch (e) {}
+    }, [nama, nim]);
 
     if (!nama || !nim) {
         return <h3>Data tidak ditemukan</h3>;
@@ -45,6 +55,9 @@ function Barcode() {
                     value={nim}
                     size={220}
                 />
+
+                {/* persist last generated QR info so ScanPanitia can pick up name */}
+                
 
                 <div style={styles.info}>
                     <p>Nama : {nama}</p>

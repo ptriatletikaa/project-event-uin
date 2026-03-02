@@ -1,4 +1,6 @@
-import { useState, } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Html5QrcodeScanner } from "html5-qrcode";
+import jsQR from "jsqr";
 
 import bg from "../assets/Gedung.jpg";
 
@@ -31,6 +33,226 @@ export default function ScanPanitia() {
       },
     ]);
   };
+
+  const scannerRef = useRef(null);
+  const lastScanRef = useRef(null);
+  const [notif, setNotif] = useState(null);
+
+  const showNotification = (message) => {
+    setNotif(message);
+    setTimeout(() => setNotif(null), 3000);
+  };
+
+  useEffect(() => {
+    if (tab !== "scan") return;
+
+    if (scannerRef.current) return;
+
+    try {
+      const config = { fps: 10, qrbox: 250 };
+      const scanner = new Html5QrcodeScanner("reader", config, false);
+
+      const onScanSuccess = (decodedText, decodedResult) => {
+        if (lastScanRef.current === decodedText) return;
+        lastScanRef.current = decodedText;
+
+        let nama = decodedText;
+        let nim = decodedText;
+
+        const getNearbyNameNim = () => {
+          try {
+            const el = document.getElementById("qr-code");
+            if (!el) return null;
+            const parent = el.parentElement;
+            if (!parent) return null;
+            const ps = parent.querySelectorAll("p");
+            let foundNama = null;
+            let foundNim = null;
+            ps.forEach((p) => {
+              const t = p.textContent || "";
+              const mNama = t.match(/Nama\s*[:\-]?\s*(.+)/i);
+              const mNim = t.match(/NIM\s*[:\-]?\s*(.+)/i);
+              if (mNama) foundNama = mNama[1].trim();
+              if (mNim) foundNim = mNim[1].trim();
+            });
+            if (foundNama || foundNim) return { nama: foundNama, nim: foundNim };
+          } catch (e) {
+            return null;
+          }
+          return null;
+        };
+
+        try {
+          const data = JSON.parse(decodedText);
+          if (data.nama) nama = data.nama;
+          if (data.nim) nim = data.nim;
+        } catch (e) {
+          // not JSON: if decodedText looks like a NIM (digits), try to get name from DOM
+          if (/^\d+$/.test(decodedText)) {
+            // prefer last generated QR stored in localStorage (from Barcode.jsx)
+            try {
+              const raw = localStorage.getItem('lastGeneratedQr');
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed.nim && parsed.nim.toString() === decodedText.toString()) {
+                  nama = parsed.nama || decodedText;
+                  nim = parsed.nim || decodedText;
+                }
+              }
+            } catch (e) {}
+
+            if (!nama || nama === decodedText) {
+              const nearby = getNearbyNameNim();
+              if (nearby && nearby.nama) {
+                nama = nearby.nama;
+                nim = nearby.nim || decodedText;
+              } else {
+                // fallback: decodedText is NIM only
+                nama = decodedText;
+                nim = decodedText;
+              }
+            }
+          } else {
+            // decodedText contains letters; treat as name
+            nama = decodedText;
+            nim = "";
+            const nearby = getNearbyNameNim();
+            if (nearby && nearby.nim) nim = nearby.nim;
+          }
+        }
+
+        const now = new Date();
+        const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
+        const jam = now.toLocaleTimeString("id-ID");
+
+        setRiwayat((prev) => [
+          ...prev,
+          { nama, nim, hari, jam, ket: "Hadir" },
+        ]);
+
+        // show notification for successful scan
+        try {
+          showNotification(`Scan berhasil: ${nama} (${nim})`);
+        } catch (e) {}
+
+        setTimeout(() => {
+          lastScanRef.current = null;
+        }, 3000);
+      };
+
+      const onScanError = (err) => {
+        // ignore frequent decode errors
+      };
+
+      scanner.render(onScanSuccess, onScanError);
+      scannerRef.current = scanner;
+      // attempt to auto-decode if a QR canvas/image from Barcode.jsx exists
+      const tryDecodeFromPage = () => {
+        const el = document.getElementById("qr-code");
+        if (!el) return null;
+
+        // attempt to read nearby text (Barcode.jsx renders Nama/NIM in sibling <div>)
+        try {
+          const parent = el.parentElement;
+          if (parent) {
+            const ps = parent.querySelectorAll("p");
+            let foundNama = null;
+            let foundNim = null;
+            if (ps && ps.length) {
+              ps.forEach((p) => {
+                const t = p.textContent || "";
+                const mNama = t.match(/Nama\s*[:\-]?\s*(.+)/i);
+                const mNim = t.match(/NIM\s*[:\-]?\s*(.+)/i);
+                if (mNama) foundNama = mNama[1].trim();
+                if (mNim) foundNim = mNim[1].trim();
+              });
+            }
+            if (foundNama || foundNim) return { nama: foundNama || "Tidak Diketahui", nim: foundNim || "" };
+          }
+        } catch (e) {}
+
+        // if canvas, read image data
+        if (el.tagName === "CANVAS") {
+          const canvas = el;
+          try {
+            const ctx = canvas.getContext("2d");
+            const { width, height } = canvas;
+            const imgData = ctx.getImageData(0, 0, width, height);
+            const decoded = jsQR(imgData.data, width, height);
+            if (decoded && decoded.data) return decoded.data;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        // if img element, draw to offscreen canvas
+        if (el.tagName === "IMG") {
+          const img = el;
+          const off = document.createElement("canvas");
+          off.width = img.naturalWidth || img.width;
+          off.height = img.naturalHeight || img.height;
+          const ctx = off.getContext("2d");
+          try {
+            ctx.drawImage(img, 0, 0, off.width, off.height);
+            const imgData = ctx.getImageData(0, 0, off.width, off.height);
+            const decoded = jsQR(imgData.data, off.width, off.height);
+            if (decoded && decoded.data) return decoded.data;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        return null;
+      };
+
+      // try once immediately and a couple more times (in case rendering delayed)
+      const attemptAuto = () => {
+        const val = tryDecodeFromPage();
+        if (!val) return;
+
+        // if object with nama/nim found, register directly
+        if (typeof val === "object") {
+          const nama = val.nama || "Tidak Diketahui";
+          const nim = val.nim || "";
+          if (lastScanRef.current === nim && nim) return;
+          lastScanRef.current = nim || nama;
+
+          const now = new Date();
+          const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
+          const jam = now.toLocaleTimeString("id-ID");
+
+          setRiwayat((prev) => [
+            ...prev,
+            { nama, nim, hari, jam, ket: "Hadir" },
+          ]);
+          try { showNotification(`Scan berhasil: ${nama} ${nim ? `(${nim})` : ''}`); } catch (e) {}
+          return;
+        }
+
+        // otherwise val is decoded text string
+        onScanSuccess(val, null);
+      };
+
+      attemptAuto();
+      const autoInterval = setInterval(attemptAuto, 800);
+      setTimeout(() => clearInterval(autoInterval), 5000);
+    } catch (err) {
+      console.error("Failed to start scanner", err);
+      const reader = document.getElementById("reader");
+      if (reader) reader.innerText = "Tidak dapat mengakses kamera. Periksa izin browser.";
+    }
+
+    return () => {
+      if (scannerRef.current) {
+        try {
+          scannerRef.current.clear();
+        } catch (e) {}
+        scannerRef.current = null;
+      }
+      // clear any intervals (best-effort)
+      try { clearInterval(); } catch (e) {}
+    };
+  }, [tab]);
 
   const downloadCSV = () => {
     if (riwayat.length === 0) return;
@@ -89,12 +311,17 @@ export default function ScanPanitia() {
       {tab === "scan" && (
         <div style={styles.scanBox}>
           <h2>Scan QR Wisudawan</h2>
-          <div style={styles.fakeCamera}>Kamera Scan (Simulasi)</div>
-          <button style={styles.scanBtn} onClick={tambahSimulasi}>
-            Simulasikan Scan
-          </button>
+          {/* real camera scanner will render into this div */}
+          <div id="reader" style={styles.fakeCamera}></div>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button style={styles.scanBtn} onClick={tambahSimulasi}>
+              Simulasikan Scan
+            </button>
+          </div>
         </div>
       )}
+
+      {notif && <div style={styles.notif}>{notif}</div>}
 
       {/* RIWAYAT */}
       {tab === "riwayat" && (
@@ -181,17 +408,18 @@ const styles = {
   },
 
   scanBox: {
-    maxWidth: "420px",
+    width: "min(860px, 95%)",
     margin: "0 auto",
     background: "rgba(255,255,255,.15)",
     backdropFilter: "blur(10px)",
-    padding: "25px",
+    padding: "30px",
     borderRadius: "16px",
     textAlign: "center",
   },
 
   fakeCamera: {
-    height: "220px",
+    height: "360px",
+    maxHeight: "70vh",
     background: "rgba(0,0,0,.4)",
     borderRadius: "12px",
     display: "flex",
@@ -269,5 +497,17 @@ const styles = {
     padding: "20px",
     textAlign: "center",
     color: "#333",
+  },
+  notif: {
+    position: "fixed",
+    top: 20,
+    right: 20,
+    background: "#16a34a",
+    color: "#fff",
+    padding: "10px 14px",
+    borderRadius: 10,
+    boxShadow: "0 6px 18px rgba(0,0,0,.25)",
+    zIndex: 9999,
+    fontWeight: 600,
   },
 };
