@@ -52,7 +52,7 @@ function Barcode() {
 
                 <QRCodeCanvas
                     id="qr-code"
-                    value={nim}
+                    value={JSON.stringify({ nama, nim })}
                     size={220}
                 />
 
