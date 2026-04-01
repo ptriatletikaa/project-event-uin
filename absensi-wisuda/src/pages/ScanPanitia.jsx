@@ -228,10 +228,16 @@ export default function ScanPanitia() {
         const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
         const jam = now.toLocaleTimeString("id-ID");
 
-        setRiwayat((prev) => [
-          ...prev,
-          { nama, nim, hari, jam, ket: "Hadir" },
-        ]);
+        setRiwayat((prev) => {
+          const updated = [
+            ...prev,
+            { nama, nim, hari, jam, ket: "Hadir" },
+          ];
+
+          localStorage.setItem("riwayatAbsensi", JSON.stringify(updated));
+
+          return updated;
+        });
         try {
           showNotification(`Scan berhasil: ${nama} ${nim ? `(${nim})` : ""}`);
         } catch (e) { }
@@ -519,32 +525,32 @@ const styles = {
     color: "#333",
   },
   notif: {
-  position: "fixed",
-  top: 20,
-  left: "50%",
-  transform: "translateX(-50%)",
-  background: "#22c55e",
-  color: "#fff",
-  padding: "14px 22px",
-  borderRadius: "12px",
-  boxShadow: "0 10px 30px rgba(0,0,0,.3)",
-  display: "flex",
-  alignItems: "center",
-  gap: "12px",
-  zIndex: 9999,
-  fontWeight: 600,
-},
+    position: "fixed",
+    top: 20,
+    left: "50%",
+    transform: "translateX(-50%)",
+    background: "#22c55e",
+    color: "#fff",
+    padding: "14px 22px",
+    borderRadius: "12px",
+    boxShadow: "0 10px 30px rgba(0,0,0,.3)",
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    zIndex: 9999,
+    fontWeight: 600,
+  },
 
-notifIcon: {
-  width: "28px",
-  height: "28px",
-  borderRadius: "6px",
-  background: "#fff",
-  color: "#22c55e",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontWeight: "bold",
-  fontSize: "18px",
-},
+  notifIcon: {
+    width: "28px",
+    height: "28px",
+    borderRadius: "6px",
+    background: "#fff",
+    color: "#22c55e",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "bold",
+    fontSize: "18px",
+  },
 };
