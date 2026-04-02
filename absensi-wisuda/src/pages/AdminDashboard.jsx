@@ -4,11 +4,8 @@ import bg from "../assets/Gedung.jpg";
 
 export default function AdminDashboard() {
   const [active, setActive] = useState("Dashboard");
-
   const [dataMahasiswa, setDataMahasiswa] = useState([]);
   const [dataUndangan, setDataUndangan] = useState([]);
-
-  const [tabUndangan, setTabUndangan] = useState("Data Undangan");
 
   const menu = [
     "Dashboard",
@@ -17,7 +14,6 @@ export default function AdminDashboard() {
     "Data Event",
   ];
 
-  // LOAD DATA
   useEffect(() => {
     const mhs = localStorage.getItem("riwayatAbsensi");
     if (mhs) setDataMahasiswa(JSON.parse(mhs));
@@ -43,6 +39,8 @@ export default function AdminDashboard() {
       const formatted = json.map((item) => ({
         nama: item.Nama || item.nama || "",
         nim: item.NIM || item.nim || "",
+        jurusan: item.Jurusan || item.jurusan || "",
+        ortu: item.Ortu || item["Nama Orang Tua"] || "",
       }));
 
       setDataUndangan(formatted);
@@ -52,14 +50,39 @@ export default function AdminDashboard() {
     reader.readAsArrayBuffer(file);
   };
 
-  // BUAT UNDANGAN
+  // BUAT UNDANGAN OTOMATIS
   const buatUndangan = () => {
     if (dataUndangan.length === 0) {
       alert("Data undangan masih kosong!");
       return;
     }
 
-    alert("Undangan berhasil dibuat!");
+    const template = dataUndangan.map((u) => `
+UNDANGAN WISUDA 🎓
+
+Kepada Yth:
+${u.nama}
+Orang Tua: ${u.ortu || "-"}
+
+Kami mengundang Anda untuk menghadiri acara Wisuda.
+
+Detail:
+NIM: ${u.nim}
+Jurusan: ${u.jurusan || "-"}
+
+Terima kasih 🙏
+-----------------------------------
+`).join("\n");
+
+    if (navigator.share) {
+      navigator.share({
+        title: "Undangan Wisuda",
+        text: template,
+      });
+    } else {
+      navigator.clipboard.writeText(template);
+      alert("Undangan berhasil dibuat & disalin!");
+    }
   };
 
   return (
@@ -121,7 +144,7 @@ export default function AdminDashboard() {
           <>
             <h1 style={styles.title}>Data Mahasiswa Hadir</h1>
 
-            <div style={styles.tableBox}>
+            <div style={styles.tableModern}>
               <table style={styles.table}>
                 <thead>
                   <tr>
@@ -144,7 +167,7 @@ export default function AdminDashboard() {
                     dataMahasiswa.map((m, i) => (
                       <tr key={i}>
                         <td style={styles.td}>{i + 1}</td>
-                        <td style={styles.td}>{m.nama}</td>
+                        <td style={styles.tdNama}>{m.nama}</td>
                         <td style={styles.td}>{m.nim}</td>
                         <td style={styles.td}>{m.hari}</td>
                         <td style={styles.td}>{m.jam}</td>
@@ -161,104 +184,70 @@ export default function AdminDashboard() {
         {/* DATA UNDANGAN */}
         {active === "Data Undangan" && (
           <>
-            <h1 style={styles.title}>Data Undangan</h1>
+            <h1 style={styles.title}>DATA UNDANGAN</h1>
 
-            {/* TAB */}
-            <div style={styles.tabWrap}>
-              {["Data Undangan"].map((item) => (
+            <div style={styles.actionBar}>
+              
+              <div style={styles.rightAction}>
+                <label style={styles.glassBtn}>
+                  📂 Import Excel
+                  <input
+                    type="file"
+                    accept=".xlsx, .csv"
+                    onChange={handleImportExcel}
+                    hidden
+                  />
+                </label>
+
                 <button
-                  key={item}
-                  onClick={() => setTabUndangan(item)}
-                  style={{
-                    ...styles.tabBtn,
-                    ...(tabUndangan === item ? styles.tabActive : {}),
-                  }}
+                  style={styles.glassBtnGreen}
+                  onClick={buatUndangan}
                 >
-                  {item}
+                  ✉️ Buat Undangan
                 </button>
-              ))}
+              </div>
             </div>
 
-            {/* IMPORT + BUAT */}
-            <div style={styles.topAction}>
-              <label style={styles.uploadBtn}>
-                Import Excel
-                <input
-                  type="file"
-                  accept=".xlsx, .csv"
-                  onChange={handleImportExcel}
-                  hidden
-                />
-              </label>
-
-              <button
-                style={styles.generateBtn}
-                onClick={buatUndangan}
-              >
-                Buat Undangan
-              </button>
-            </div>
-
-            {/* DATA UNDANGAN */}
-            {tabUndangan === "Data Undangan" && (
+            <div style={styles.tableModern}>
               <table style={styles.table}>
                 <thead>
                   <tr>
                     <th style={styles.th}>No</th>
                     <th style={styles.th}>Nama</th>
                     <th style={styles.th}>NIM</th>
+                    <th style={styles.th}>Jurusan</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {dataUndangan.map((u, i) => (
-                    <tr key={i}>
-                      <td style={styles.td}>{i + 1}</td>
-                      <td style={styles.td}>{u.nama}</td>
-                      <td style={styles.td}>{u.nim}</td>
+                  {dataUndangan.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" style={styles.empty}>
+                        Belum ada data undangan
+                      </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
-            {/* HADIR */}
-            {tabUndangan === "Hadir" && (
-              <table style={styles.table}>
-                <tbody>
-                  {dataMahasiswa.map((m, i) => (
-                    <tr key={i}>
-                      <td style={styles.td}>{m.nama}</td>
-                      <td style={styles.td}>{m.nim}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
-            {/* TIDAK HADIR */}
-            {tabUndangan === "Tidak Hadir" && (
-              <table style={styles.table}>
-                <tbody>
-                  {dataUndangan
-                    .filter(
-                      (u) =>
-                        !dataMahasiswa.some(
-                          (m) => m.nim === u.nim
-                        )
-                    )
-                    .map((u, i) => (
+                  ) : (
+                    dataUndangan.map((u, i) => (
                       <tr key={i}>
-                        <td style={styles.td}>{u.nama}</td>
+                        <td style={styles.td}>{i + 1}</td>
+
+                        <td style={styles.tdNamaBox}>
+                          <div style={styles.namaUtama}>{u.nama}</div>
+                          <div style={styles.namaOrtu}>
+                            Orang Tua: {u.ortu || "-"}
+                          </div>
+                        </td>
+
                         <td style={styles.td}>{u.nim}</td>
+                        <td style={styles.td}>{u.jurusan || "-"}</td>
                       </tr>
-                    ))}
+                    ))
+                  )}
                 </tbody>
               </table>
-            )}
+            </div>
           </>
         )}
 
-        {/* DATA EVENT */}
         {active === "Data Event" && (
           <h1 style={styles.title}>Halaman Data Event</h1>
         )}
@@ -295,10 +284,9 @@ const styles = {
 
   brand: {
     color: "#fff",
-    fontSize: "18px",
-    fontWeight: "bold",
-    marginBottom: "30px",
     textAlign: "center",
+    marginBottom: "30px",
+    fontWeight: "bold",
   },
 
   menu: {
@@ -309,29 +297,27 @@ const styles = {
 
   menuItem: {
     color: "#cbd5f5",
-    padding: "12px 16px",
-    borderRadius: "8px",
+    padding: "12px",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
   },
 
   menuActive: {
-    color: "#fff",
     background: "rgba(255,255,255,.05)",
+    color: "#fff",
   },
 
   indicator: {
     width: "4px",
     height: "18px",
     background: "#3b82f6",
-    borderRadius: "4px",
     marginRight: "10px",
   },
 
   main: {
     flex: 1,
-    padding: "35px",
+    padding: "30px",
   },
 
   title: {
@@ -340,100 +326,92 @@ const styles = {
   },
 
   subtitle: {
-    color: "#475569",
-    marginBottom: "30px",
+    marginBottom: "20px",
   },
 
   cards: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))",
+    gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))",
     gap: "20px",
   },
 
   card: {
-    color: "#fff",
     padding: "20px",
     borderRadius: "12px",
+    color: "#fff",
   },
 
-  cardTitle: {
-    fontSize: "14px",
+  actionBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "20px",
   },
 
-  cardValue: {
-    fontSize: "30px",
-    fontWeight: "bold",
+  rightAction: {
+    display: "flex",
+    gap: "10px",
   },
 
-  tableBox: {
+  tag: {
+    background: "#2563eb",
+    color: "#fff",
+    padding: "6px 12px",
+    borderRadius: "999px",
+  },
+
+  glassBtn: {
+    padding: "10px",
+    borderRadius: "10px",
+    backdropFilter: "blur(10px)",
+    background: "rgba(255,255,255,0.3)",
+    cursor: "pointer",
+  },
+
+  glassBtnGreen: {
+    padding: "10px",
+    borderRadius: "10px",
+    backdropFilter: "blur(10px)",
+    background: "rgba(22,163,74,0.3)",
+    cursor: "pointer",
+  },
+
+  tableModern: {
     background: "#fff",
     borderRadius: "12px",
     overflow: "hidden",
-    marginTop: "20px",
   },
 
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    background: "#fff",
   },
 
   th: {
-    background: "#f1f5f9",
     padding: "12px",
-    textAlign: "center",
+    background: "#f1f5f9",
   },
 
   td: {
-    padding: "10px",
+    padding: "12px",
+    borderTop: "1px solid #eee",
     textAlign: "center",
-    borderTop: "1px solid #e2e8f0",
+  },
+
+  tdNamaBox: {
+    textAlign: "left",
+  },
+
+  namaUtama: {
+    fontWeight: "bold",
+  },
+
+  namaOrtu: {
+    fontSize: "13px",
+    color: "#64748b",
   },
 
   empty: {
-    padding: "20px",
     textAlign: "center",
-  },
-
-  tabWrap: {
-    display: "flex",
-    gap: "10px",
-    marginBottom: "20px",
-  },
-
-  tabBtn: {
-    padding: "8px 14px",
-    border: "none",
-    borderRadius: "8px",
-    background: "#e2e8f0",
-    cursor: "pointer",
-  },
-
-  tabActive: {
-    background: "#2563eb",
-    color: "#fff",
-  },
-
-  topAction: {
-    display: "flex",
-    gap: "10px",
-    marginBottom: "15px",
-  },
-
-  uploadBtn: {
-    padding: "8px 14px",
-    background: "#2563eb",
-    color: "#fff",
-    borderRadius: "6px",
-    cursor: "pointer",
-  },
-
-  generateBtn: {
-    padding: "8px 14px",
-    background: "#16a34a",
-    color: "#fff",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
+    padding: "20px",
   },
 };
