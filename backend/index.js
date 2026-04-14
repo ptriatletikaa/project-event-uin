@@ -29,19 +29,29 @@ app.get("/", (req, res) => {
 
 app.post("/wisudawan", (req, res) => {
   const { nama, nim } = req.body;
+  const ket = req.body.ket || "Hadir";
 
   if (!nama || !nim) {
     return res.status(400).send("Nama dan NIM wajib diisi");
   }
 
-  const sql = "INSERT INTO wisudawan (nama, nim) VALUES (?, ?)";
-  db.query(sql, [nama, nim], (err, result) => {
-    if (err) {
-      console.log("ERROR INSERT:", err);
-      return res.status(500).send("Gagal simpan data");
+  // Try inserting with a status/ket column if the schema supports it.
+  const sqlWithKet = "INSERT INTO wisudawan (nama, nim, ket) VALUES (?, ?, ?)";
+  db.query(sqlWithKet, [nama, nim, ket], (err, result) => {
+    if (!err) {
+      return res.send("Data wisudawan berhasil disimpan");
     }
 
-    res.send("Data wisudawan berhasil disimpan");
+    // If insert with ket failed (likely column doesn't exist), fallback to simple insert
+    console.log("Insert with ket failed, falling back:", err.message || err);
+    const sql = "INSERT INTO wisudawan (nama, nim) VALUES (?, ?)";
+    db.query(sql, [nama, nim], (err2, result2) => {
+      if (err2) {
+        console.log("ERROR INSERT fallback:", err2);
+        return res.status(500).send("Gagal simpan data");
+      }
+      return res.send("Data wisudawan berhasil disimpan (fallback)");
+    });
   });
 });
 
