@@ -1,81 +1,68 @@
-import { useState } from "react";
-import bg from "../assets/Gedung.jpg";
+import { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
+import logo from "../assets/logo.png";
 
 export default function AdminDashboard() {
-  const [active, setActive] = useState("Dashboard");
+  const [active, setActive] = useState("Undangan");
+  const [dataUser, setDataUser] = useState([]);
+  const [dataUndangan, setDataUndangan] = useState([]);
+  const [search, setSearch] = useState("");
 
-  // 🔥 URUTAN SUDAH DIUBAH
   const menu = [
     "Dashboard",
-    "Data Event",
     "Data Undangan",
     "Data Mahasiswa",
+    "Data Event",
+
   ];
 
   return (
-    <div style={styles.page}>
+    <div style={styles.container}>
       {/* SIDEBAR */}
       <aside style={styles.sidebar}>
-        <div style={styles.brand}>DASHBOARD ADMIN</div>
+        <div style={styles.logoBox}>
+          <img src={logo} alt="logo" style={styles.logoImg} />
+          <div>
+            <div style={styles.logoTitle}>AdminSistemAbsensi</div>
+            <div style={styles.logoSub}>UIN Ponorogo</div>
+          </div>
+        </div>
 
         <div style={styles.menu}>
-          {menu.map((item) => (
-            <div
-              key={item}
-              onClick={() => setActive(item)}
-              style={{
-                ...styles.menuItem,
-                ...(active === item ? styles.menuActive : {}),
-              }}
-            >
-              <span
-                style={{
-                  ...styles.indicator,
-                  opacity: active === item ? 1 : 0,
-                }}
-              />
-              {item}
-            </div>
-          ))}
+          <div
+            style={active === "User" ? styles.menuItemActive : styles.menuItem}
+            onClick={() => setActive("User")}
+          >
+            User
+          </div>
+
+          <div
+            style={active === "Event" ? styles.menuItemActive : styles.menuItem}
+            onClick={() => setActive("Event")}
+          >
+            Event
+          </div>
+
+          <div
+            style={active === "Undangan" ? styles.menuItemActive : styles.menuItem}
+            onClick={() => setActive("Undangan")}
+          >
+            Undangan
+          </div>
         </div>
       </aside>
 
       {/* MAIN */}
       <main style={styles.main}>
-        <h1 style={styles.title}>{active}</h1>
+        <h1 style={styles.title}>Selamat Datang</h1>
+        <p style={styles.subtitle}>Sistem Absensi Wisuda QR Code</p>
 
-        {active === "Dashboard" && (
-          <>
-            <p style={styles.subtitle}>Sistem Absensi Wisuda QR Code</p>
-
-            <div style={styles.cards}>
-              <Stat title="Total Undangan" value="120" color="#2563eb" />
-              <Stat title="Mahasiswa Hadir" value="85" color="#7c3aed" />
-              <Stat title="Event Aktif" value="1" color="#16a34a" />
-            </div>
-          </>
-        )}
-
-        {active === "Data Event" && (
-          <div>
-            <h2>Data Event</h2>
-            <p>Data event akan ditampilkan di sini</p>
-          </div>
-        )}
-
-        {active === "Data Undangan" && (
-          <div>
-            <h2>Data Undangan</h2>
-            <p>Data undangan akan ditampilkan di sini</p>
-          </div>
-        )}
-
-        {active === "Data Mahasiswa" && (
-          <div>
-            <h2>Data Mahasiswa</h2>
-            <p>Data mahasiswa akan ditampilkan di sini</p>
-          </div>
-        )}
+        {/* STATISTIK */}
+        <div style={styles.cards}>
+          <Stat title="Total Undangan" value="120" color="#2563eb" />
+          <Stat title="Mahasiswa Hadir" value="85" color="#7c3aed" />
+          <Stat title="Event Aktif" value="1" color="#16a34a" />
+        </div>
       </main>
     </div>
   );
@@ -91,46 +78,61 @@ function Stat({ title, value, color }) {
 }
 
 const styles = {
-  page: {
-    display: "flex",
-    minHeight: "100vh",
-    backgroundImage: `
-      linear-gradient(rgba(255,255,255,.93), rgba(255,255,255,.93)),
-      url(${bg})
-    `,
-    backgroundSize: "cover",
-  },
-
+  container: { display: "flex", height: "100vh", background: "#f5f7fb" },
   sidebar: {
-    width: "260px",
-    background: "#020617",
-    padding: "25px 15px",
+    width: "250px",
+    background: "#fff",
+    padding: "20px",
+    borderRight: "1px solid #eee",
   },
-
-  brand: {
-    color: "#fff",
-    fontSize: "18px",
+  logoBox: { display: "flex", gap: "10px", marginBottom: "30px" },
+  logoImg: { width: "35px", height: "35px" },
+  logoTitle: { fontWeight: "bold", fontSize: "14px" },
+  logoSub: { fontSize: "11px", color: "#888" },
+  menu: { display: "flex", flexDirection: "column", gap: "10px" },
+  menuItem: { padding: "10px", cursor: "pointer" },
+  menuItemActive: {
+    padding: "10px",
+    background: "#e6f4ff",
+    borderRadius: "8px",
+    color: "#1890ff",
     fontWeight: "bold",
-    marginBottom: "30px",
-    textAlign: "center",
-    letterSpacing: "1px",
   },
-
-  menu: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
+  main: { flex: 1, padding: "20px" },
+  topbar: { display: "flex", justifyContent: "space-between", marginBottom: "20px" },
+  search: { padding: "10px", width: "300px", borderRadius: "8px", border: "1px solid #ddd" },
+  actions: { display: "flex", gap: "10px" },
+  btn: {
+    padding: "10px 15px",
+    background: "#52c41a",
+    color: "#fff",
+    borderRadius: "8px",
+    border: "none",
+    cursor: "pointer",
   },
-
-  menuItem: {
-    color: "#cbd5f5",
-    padding: "12px 16px",
+  btnPrimary: {
+    padding: "10px 15px",
+    background: "#1890ff",
+    color: "#fff",
+    border: "none",
     borderRadius: "8px",
     cursor: "pointer",
-    position: "relative",
+  },
+  tableBox: { background: "#fff", borderRadius: "12px", overflow: "hidden" },
+  table: { width: "100%", borderCollapse: "collapse" },
+  th: { padding: "12px", background: "#fafafa" },
+  td: { padding: "12px", borderTop: "1px solid #eee" },
+
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    background: "rgba(0,0,0,0.4)",
     display: "flex",
+    justifyContent: "center",
     alignItems: "center",
-    transition: "all .2s",
   },
 
   menuActive: {
@@ -154,7 +156,7 @@ const styles = {
 
   title: {
     fontSize: "26px",
-    marginBottom: "10px",
+    marginBottom: "4px",
   },
 
   subtitle: {
@@ -167,22 +169,9 @@ const styles = {
     gridTemplateColumns: "repeat(auto-fit, minmax(220px,1fr))",
     gap: "20px",
   },
-
-  card: {
-    color: "#fff",
-    padding: "22px",
-    borderRadius: "14px",
-    boxShadow: "0 12px 30px rgba(0,0,0,.18)",
-  },
-
-  cardTitle: {
-    fontSize: "14px",
-    opacity: 0.9,
-  },
-
-  cardValue: {
-    fontSize: "34px",
-    fontWeight: "bold",
-    marginTop: "8px",
+  input: {
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
   },
 };

@@ -17,28 +17,6 @@ export default function ScanPanitia() {
     },
   ]);
 
-  const tambahSimulasi = () => {
-    const now = new Date();
-    const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
-    const jam = now.toLocaleTimeString("id-ID");
-    // ask for simulated data so it is meaningful
-    const inputNama = window.prompt("Masukkan nama (simulasi):", "Mahasiswa Simulasi");
-    if (!inputNama) return;
-    const inputNim = window.prompt("Masukkan NIM (simulasi):", "2022XXXX");
-
-    setRiwayat((prev) => [
-      ...prev,
-      {
-        nama: inputNama,
-        nim: inputNim || "",
-        hari,
-        jam,
-        ket: "Hadir",
-      },
-    ]);
-  };
-
-  
   const lastScanRef = useRef(null);
   const [notif, setNotif] = useState(null);
   const autoIntervalRef = useRef(null);
@@ -106,7 +84,7 @@ export default function ScanPanitia() {
                 nim = parsed.nim || decodedText;
               }
             }
-          } catch (err) {}
+          } catch (err) { }
 
           if (!nama || nama === decodedText) {
             const nearby = getNearbyNameNim();
@@ -154,7 +132,7 @@ export default function ScanPanitia() {
 
       try {
         showNotification(`Scan berhasil: ${nama} ${nim ? `(${nim})` : ""}`);
-      } catch (e) {}
+      } catch (e) { }
 
       setTimeout(() => {
         lastScanRef.current = null;
@@ -188,7 +166,7 @@ export default function ScanPanitia() {
               if (decoded && decoded.data) {
                 handleDecoded(decoded.data);
               }
-            } catch (e) {}
+            } catch (e) { }
           }, 250);
         }
       } catch (err) {
@@ -211,15 +189,15 @@ export default function ScanPanitia() {
           if (ps && ps.length) {
             ps.forEach((p) => {
               const t = p.textContent || "";
-                const mNama = t.match(/Nama\s*[:-]?\s*(.+)/i);
-                const mNim = t.match(/NIM\s*[:-]?\s*(.+)/i);
+              const mNama = t.match(/Nama\s*[:-]?\s*(.+)/i);
+              const mNim = t.match(/NIM\s*[:-]?\s*(.+)/i);
               if (mNama) foundNama = mNama[1].trim();
               if (mNim) foundNim = mNim[1].trim();
             });
           }
           if (foundNama || foundNim) return { nama: foundNama || "Tidak Diketahui", nim: foundNim || "" };
         }
-      } catch (e) {}
+      } catch (e) { }
 
       if (el.tagName === "CANVAS") {
         const canvas = el;
@@ -268,13 +246,19 @@ export default function ScanPanitia() {
         const hari = now.toLocaleDateString("id-ID", { weekday: "long" });
         const jam = now.toLocaleTimeString("id-ID");
 
-        setRiwayat((prev) => [
-          ...prev,
-          { nama, nim, hari, jam, ket: "Hadir" },
-        ]);
+        setRiwayat((prev) => {
+          const updated = [
+            ...prev,
+            { nama, nim, hari, jam, ket: "Hadir" },
+          ];
+
+          localStorage.setItem("riwayatAbsensi", JSON.stringify(updated));
+
+          return updated;
+        });
         try {
           showNotification(`Scan berhasil: ${nama} ${nim ? `(${nim})` : ""}`);
-        } catch (e) {}
+        } catch (e) { }
         return;
       }
 
@@ -286,7 +270,7 @@ export default function ScanPanitia() {
     setTimeout(() => {
       try {
         clearInterval(autoIntervalRef.current);
-      } catch (e) {}
+      } catch (e) { }
       autoIntervalRef.current = null;
     }, 5000);
 
@@ -299,7 +283,7 @@ export default function ScanPanitia() {
         try {
           const tracks = videoEl.srcObject.getTracks();
           tracks.forEach((t) => t.stop());
-        } catch (e) {}
+        } catch (e) { }
         videoEl.srcObject = null;
       }
       if (autoIntervalRef.current) {
@@ -366,20 +350,22 @@ export default function ScanPanitia() {
       {tab === "scan" && (
         <div style={styles.scanBox}>
           <h2>Scan QR Wisudawan</h2>
-              {/* real camera scanner will render video into this div */}
-              <div id="reader" style={styles.fakeCamera}>
-                <video id="video" ref={videoRef} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                <canvas ref={canvasRef} style={{ display: "none" }} />
-              </div>
+          {/* real camera scanner will render video into this div */}
+          <div id="reader" style={styles.fakeCamera}>
+            <video id="video" ref={videoRef} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <canvas ref={canvasRef} style={{ display: "none" }} />
+          </div>
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-            <button style={styles.scanBtn} onClick={tambahSimulasi}>
-              Simulasikan Scan
-            </button>
           </div>
         </div>
       )}
 
-      {notif && <div style={styles.notif}>{notif}</div>}
+      {notif && (
+        <div style={styles.notif}>
+          <div style={styles.notifIcon}>✓</div>
+          <div>{notif}</div>
+        </div>
+      )}
 
       {/* RIWAYAT */}
       {tab === "riwayat" && (
@@ -535,20 +521,20 @@ const styles = {
   },
 
   th: {
-  border: "1px solid #cbd5e1",
-  padding: "12px",
-  background: "#c0cff0ff",   // WARNA HEADER
-  color: "#000000ff",        // WARNA TEKS
-  textAlign: "center",
-  fontWeight: "bold",
-},
+    border: "1px solid #cbd5e1",
+    padding: "12px",
+    background: "#c0cff0ff",   // WARNA HEADER
+    color: "#000000ff",        // WARNA TEKS
+    textAlign: "center",
+    fontWeight: "bold",
+  },
 
 
   td: {
     border: "1px solid #cbd5e1",
     padding: "10px",
     textAlign: "center",
-    
+
   },
 
   empty: {
@@ -559,13 +545,30 @@ const styles = {
   notif: {
     position: "fixed",
     top: 20,
-    right: 20,
-    background: "#16a34a",
+    left: "50%",
+    transform: "translateX(-50%)",
+    background: "#22c55e",
     color: "#fff",
-    padding: "10px 14px",
-    borderRadius: 10,
-    boxShadow: "0 6px 18px rgba(0,0,0,.25)",
+    padding: "14px 22px",
+    borderRadius: "12px",
+    boxShadow: "0 10px 30px rgba(0,0,0,.3)",
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
     zIndex: 9999,
     fontWeight: 600,
+  },
+
+  notifIcon: {
+    width: "28px",
+    height: "28px",
+    borderRadius: "6px",
+    background: "#fff",
+    color: "#22c55e",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "bold",
+    fontSize: "18px",
   },
 };
