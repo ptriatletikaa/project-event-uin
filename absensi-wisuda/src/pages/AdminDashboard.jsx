@@ -4,12 +4,12 @@ import bg from "../assets/Gedung.jpg";
 export default function AdminDashboard() {
   const [active, setActive] = useState("Dashboard");
 
+  // 🔥 URUTAN SUDAH DIUBAH
   const menu = [
     "Dashboard",
+    "Data Event",
     "Data Undangan",
     "Data Mahasiswa",
-    "Data Event",
-
   ];
 
   return (
@@ -42,15 +42,40 @@ export default function AdminDashboard() {
 
       {/* MAIN */}
       <main style={styles.main}>
-        <h1 style={styles.title}>Selamat Datang</h1>
-        <p style={styles.subtitle}>Sistem Absensi Wisuda QR Code</p>
+        <h1 style={styles.title}>{active}</h1>
 
-        {/* STATISTIK */}
-        <div style={styles.cards}>
-          <Stat title="Total Undangan" value="120" color="#2563eb" />
-          <Stat title="Mahasiswa Hadir" value="85" color="#7c3aed" />
-          <Stat title="Event Aktif" value="1" color="#16a34a" />
-        </div>
+        {active === "Dashboard" && (
+          <>
+            <p style={styles.subtitle}>Sistem Absensi Wisuda QR Code</p>
+
+            <div style={styles.cards}>
+              <Stat title="Total Undangan" value="120" color="#2563eb" />
+              <Stat title="Mahasiswa Hadir" value="85" color="#7c3aed" />
+              <Stat title="Event Aktif" value="1" color="#16a34a" />
+            </div>
+          </>
+        )}
+
+        {active === "Data Event" && (
+          <div>
+            <h2>Data Event</h2>
+            <p>Data event akan ditampilkan di sini</p>
+          </div>
+        )}
+
+        {active === "Data Undangan" && (
+          <div>
+            <h2>Data Undangan</h2>
+            <p>Data undangan akan ditampilkan di sini</p>
+          </div>
+        )}
+
+        {active === "Data Mahasiswa" && (
+          <div>
+            <h2>Data Mahasiswa</h2>
+            <p>Data mahasiswa akan ditampilkan di sini</p>
+          </div>
+        )}
       </main>
     </div>
   );
@@ -129,7 +154,7 @@ const styles = {
 
   title: {
     fontSize: "26px",
-    marginBottom: "4px",
+    marginBottom: "10px",
   },
 
   subtitle: {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import jsQR from "jsqr";
+import axios from "axios";
 
 import bg from "../assets/Gedung.jpg";
 
@@ -133,6 +134,23 @@ export default function ScanPanitia() {
         ...prev,
         { nama, nim, hari, jam, ket: "Hadir" },
       ]);
+
+      // send to backend (if available)
+      try {
+        if (nama && nim) {
+          axios
+            .post("http://localhost:5000/wisudawan", { nama, nim, ket: "Hadir" })
+            .then(() => {
+              showNotification(`Tersimpan ke server: ${nama}`);
+            })
+            .catch((err) => {
+              console.error("API error:", err);
+              showNotification("Gagal kirim ke server");
+            });
+        }
+      } catch (e) {
+        console.error("Axios error:", e);
+      }
 
       try {
         showNotification(`Scan berhasil: ${nama} ${nim ? `(${nim})` : ""}`);
