@@ -1,25 +1,30 @@
 import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-import bg from "../assets/Gedung.jpg";
+import logo from "../assets/logo.png";
 
 export default function AdminDashboard() {
-  const [active, setActive] = useState("Dashboard");
-  const [dataMahasiswa, setDataMahasiswa] = useState([]);
+  const [active, setActive] = useState("Undangan");
+  const [dataUser, setDataUser] = useState([]);
   const [dataUndangan, setDataUndangan] = useState([]);
+  const [search, setSearch] = useState("");
 
-  const menu = [
-    "Dashboard",
-    "Data Undangan",
-    "Data Mahasiswa",
-    "Data Event",
-  ];
+  const [showModal, setShowModal] = useState(false);
+  const [formEvent, setFormEvent] = useState({
+    nama: "",
+    tempat: "",
+    tanggal: "",
+  });
+
+  const [dataEvent, setDataEvent] = useState([
+    { id: 1, nama: "Wisuda 2025", tempat: "Gedung A", tanggal: "2025-09-10" },
+    { id: 2, nama: "Seminar IT", tempat: "Aula Kampus", tanggal: "2025-10-05" },
+  ]);
 
   useEffect(() => {
-    const mhs = localStorage.getItem("riwayatAbsensi");
-    if (mhs) setDataMahasiswa(JSON.parse(mhs));
-
-    const undangan = localStorage.getItem("dataUndangan");
-    if (undangan) setDataUndangan(JSON.parse(undangan));
+    fetch("http://localhost:5000/users")
+      .then((res) => res.json())
+      .then((data) => setDataUser(data))
+      .catch((err) => console.error(err));
   }, []);
 
   // IMPORT EXCEL
@@ -37,10 +42,11 @@ export default function AdminDashboard() {
       const json = XLSX.utils.sheet_to_json(sheet);
 
       const formatted = json.map((item) => ({
-        nama: item.Nama || item.nama || "",
-        nim: item.NIM || item.nim || "",
-        jurusan: item.Jurusan || item.jurusan || "",
-        ortu: item.Ortu || item["Nama Orang Tua"] || "",
+        nama: item.Nama || "",
+        nim: item.NIM || "",
+        jurusan: item.Jurusan || "",
+        ortu: item.Ortu || "",
+        event: item.Event || "Wisuda 2025",
       }));
 
       setDataUndangan(formatted);
@@ -50,368 +56,339 @@ export default function AdminDashboard() {
     reader.readAsArrayBuffer(file);
   };
 
-  // BUAT UNDANGAN OTOMATIS
-  const buatUndangan = () => {
-    if (dataUndangan.length === 0) {
-      alert("Data undangan masih kosong!");
+  // TAMBAH EVENT
+  const handleAddEvent = () => {
+    if (!formEvent.nama || !formEvent.tempat || !formEvent.tanggal) {
+      alert("Semua field harus diisi!");
       return;
     }
 
-    const template = dataUndangan.map((u) => `
-UNDANGAN WISUDA 🎓
+    const newEvent = {
+      id: dataEvent.length + 1,
+      ...formEvent,
+    };
 
-Kepada Yth:
-${u.nama}
-Orang Tua: ${u.ortu || "-"}
-
-Kami mengundang Anda untuk menghadiri acara Wisuda.
-
-Detail:
-NIM: ${u.nim}
-Jurusan: ${u.jurusan || "-"}
-
-Terima kasih 🙏
------------------------------------
-`).join("\n");
-
-    if (navigator.share) {
-      navigator.share({
-        title: "Undangan Wisuda",
-        text: template,
-      });
-    } else {
-      navigator.clipboard.writeText(template);
-      alert("Undangan berhasil dibuat & disalin!");
-    }
+    setDataEvent([...dataEvent, newEvent]);
+    setFormEvent({ nama: "", tempat: "", tanggal: "" });
+    setShowModal(false);
   };
 
+  // COPY UNDANGAN
+  const buatUndangan = () => {
+    const text = dataUndangan
+      .map(
+        (u) => `
+UNDANGAN WISUDA 🎓
+
+${u.nama}
+Event: ${u.event}
+Ortu: ${u.ortu}
+NIM: ${u.nim}
+Jurusan: ${u.jurusan}
+`
+      )
+      .join("\n");
+
+    navigator.clipboard.writeText(text);
+    alert("Undangan disalin!");
+  };
+
+  const filtered = dataUndangan.filter((d) =>
+    d.nama.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const filteredEvent = dataEvent.filter((e) =>
+    e.nama.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div style={styles.page}>
+    <div style={styles.container}>
       {/* SIDEBAR */}
       <aside style={styles.sidebar}>
-        <div style={styles.brand}>DASHBOARD ADMIN</div>
+        <div style={styles.logoBox}>
+          <img src={logo} alt="logo" style={styles.logoImg} />
+          <div>
+            <div style={styles.logoTitle}>AdminSistemAbsensi</div>
+            <div style={styles.logoSub}>UIN Ponorogo</div>
+          </div>
+        </div>
 
         <div style={styles.menu}>
-          {menu.map((item) => (
-            <div
-              key={item}
-              onClick={() => setActive(item)}
-              style={{
-                ...styles.menuItem,
-                ...(active === item ? styles.menuActive : {}),
-              }}
-            >
-              <span
-                style={{
-                  ...styles.indicator,
-                  opacity: active === item ? 1 : 0,
-                }}
-              />
-              {item}
-            </div>
-          ))}
+          <div
+            style={active === "User" ? styles.menuItemActive : styles.menuItem}
+            onClick={() => setActive("User")}
+          >
+            User
+          </div>
+
+          <div
+            style={active === "Event" ? styles.menuItemActive : styles.menuItem}
+            onClick={() => setActive("Event")}
+          >
+            Event
+          </div>
+
+          <div
+            style={active === "Undangan" ? styles.menuItemActive : styles.menuItem}
+            onClick={() => setActive("Undangan")}
+          >
+            Undangan
+          </div>
         </div>
       </aside>
 
       {/* MAIN */}
-      <main style={styles.main}>
-        {/* DASHBOARD */}
-        {active === "Dashboard" && (
-          <>
-            <h1 style={styles.title}>Selamat Datang</h1>
-            <p style={styles.subtitle}>
-              Sistem Absensi Wisuda QR Code
-            </p>
+      <div style={styles.main}>
+        <div style={styles.topbar}>
+          <input
+            type="text"
+            placeholder="Search..."
+            style={styles.search}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
 
-            <div style={styles.cards}>
-              <Stat
-                title="Total Undangan"
-                value={dataUndangan.length}
-                color="#2563eb"
-              />
-              <Stat
-                title="Mahasiswa Hadir"
-                value={dataMahasiswa.length}
-                color="#7c3aed"
-              />
-              <Stat title="Event Aktif" value="1" color="#16a34a" />
-            </div>
-          </>
-        )}
-
-        {/* DATA MAHASISWA */}
-        {active === "Data Mahasiswa" && (
-          <>
-            <h1 style={styles.title}>Data Mahasiswa Hadir</h1>
-
-            <div style={styles.tableModern}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>No</th>
-                    <th style={styles.th}>Nama</th>
-                    <th style={styles.th}>NIM</th>
-                    <th style={styles.th}>Hari</th>
-                    <th style={styles.th}>Jam</th>
-                    <th style={styles.th}>Keterangan</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dataMahasiswa.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" style={styles.empty}>
-                        Belum ada data
-                      </td>
-                    </tr>
-                  ) : (
-                    dataMahasiswa.map((m, i) => (
-                      <tr key={i}>
-                        <td style={styles.td}>{i + 1}</td>
-                        <td style={styles.tdNama}>{m.nama}</td>
-                        <td style={styles.td}>{m.nim}</td>
-                        <td style={styles.td}>{m.hari}</td>
-                        <td style={styles.td}>{m.jam}</td>
-                        <td style={styles.td}>{m.ket}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-
-        {/* DATA UNDANGAN */}
-        {active === "Data Undangan" && (
-          <>
-            <h1 style={styles.title}>DATA UNDANGAN</h1>
-
-            <div style={styles.actionBar}>
-              
-              <div style={styles.rightAction}>
-                <label style={styles.glassBtn}>
-                  📂 Import Excel
+          <div style={styles.actions}>
+            {active === "Undangan" && (
+              <>
+                <label style={styles.btn}>
+                  Import Excel
                   <input
                     type="file"
-                    accept=".xlsx, .csv"
+                    accept=".xlsx, .xls"
                     onChange={handleImportExcel}
-                    hidden
+                    style={{ display: "none" }}
                   />
                 </label>
 
-                <button
-                  style={styles.glassBtnGreen}
-                  onClick={buatUndangan}
-                >
-                  ✉️ Buat Undangan
+                <button style={styles.btn} onClick={buatUndangan}>
+                  Copy Undangan
                 </button>
-              </div>
-            </div>
+              </>
+            )}
 
-            <div style={styles.tableModern}>
-              <table style={styles.table}>
+            <button
+              style={styles.btnPrimary}
+              onClick={() => active === "Event" && setShowModal(true)}
+            >
+              + Tambah
+            </button>
+          </div>
+        </div>
+
+        {/* TABLE */}
+        <div style={styles.tableBox}>
+          <table style={styles.table}>
+            {/* USER */}
+            {active === "User" && (
+              <>
                 <thead>
                   <tr>
-                    <th style={styles.th}>No</th>
+                    <th style={styles.th}>ID</th>
+                    <th style={styles.th}>Username</th>
+                    <th style={styles.th}>Email</th>
+                    <th style={styles.th}>Password</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {dataUser.map((user, index) => (
+                    <tr key={index}>
+                      <td style={styles.td}>{user.id}</td>
+                      <td style={styles.td}>{user.username}</td>
+                      <td style={styles.td}>{user.email}</td>
+                      <td style={styles.td}>{user.password}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </>
+            )}
+
+            {/* EVENT */}
+            {active === "Event" && (
+              <>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>ID</th>
+                    <th style={styles.th}>Nama Event</th>
+                    <th style={styles.th}>Tempat</th>
+                    <th style={styles.th}>Tanggal</th>
+                    <th style={styles.th}>Riwayat</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filteredEvent.map((event, index) => (
+                    <tr key={index}>
+                      <td style={styles.td}>{event.id}</td>
+                      <td style={styles.td}>{event.nama}</td>
+                      <td style={styles.td}>{event.tempat}</td>
+                      <td style={styles.td}>{event.tanggal}</td>
+                      <td style={styles.td}>
+                        <button
+                          style={styles.btn}
+                          onClick={() =>
+                            alert(`Riwayat event: ${event.nama}`)
+                          }
+                        >
+                          Lihat Riwayat
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </>
+            )}
+
+            {/* UNDANGAN */}
+            {active === "Undangan" && (
+              <>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>ID</th>
                     <th style={styles.th}>Nama</th>
+                    <th style={styles.th}>Event</th>
                     <th style={styles.th}>NIM</th>
                     <th style={styles.th}>Jurusan</th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {dataUndangan.length === 0 ? (
-                    <tr>
-                      <td colSpan="4" style={styles.empty}>
-                        Belum ada data undangan
-                      </td>
+                  {filtered.map((u, index) => (
+                    <tr key={index}>
+                      <td style={styles.td}>{index + 1}</td>
+                      <td style={styles.td}>{u.nama}</td>
+                      <td style={styles.td}>{u.event}</td>
+                      <td style={styles.td}>{u.nim}</td>
+                      <td style={styles.td}>{u.jurusan}</td>
                     </tr>
-                  ) : (
-                    dataUndangan.map((u, i) => (
-                      <tr key={i}>
-                        <td style={styles.td}>{i + 1}</td>
-
-                        <td style={styles.tdNamaBox}>
-                          <div style={styles.namaUtama}>{u.nama}</div>
-                          <div style={styles.namaOrtu}>
-                            Orang Tua: {u.ortu || "-"}
-                          </div>
-                        </td>
-
-                        <td style={styles.td}>{u.nim}</td>
-                        <td style={styles.td}>{u.jurusan || "-"}</td>
-                      </tr>
-                    ))
-                  )}
+                  ))}
                 </tbody>
-              </table>
+              </>
+            )}
+          </table>
+        </div>
+      </div>
+
+      {/* ✅ MODAL TAMBAH EVENT */}
+      {showModal && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modal}>
+            <h3>Tambah Event</h3>
+
+            <input
+              type="text"
+              placeholder="Nama Event"
+              style={styles.input}
+              value={formEvent.nama}
+              onChange={(e) =>
+                setFormEvent({ ...formEvent, nama: e.target.value })
+              }
+            />
+
+            <input
+              type="text"
+              placeholder="Tempat"
+              style={styles.input}
+              value={formEvent.tempat}
+              onChange={(e) =>
+                setFormEvent({ ...formEvent, tempat: e.target.value })
+              }
+            />
+
+            <input
+              type="date"
+              style={styles.input}
+              value={formEvent.tanggal}
+              onChange={(e) =>
+                setFormEvent({ ...formEvent, tanggal: e.target.value })
+              }
+            />
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button style={styles.btnPrimary} onClick={handleAddEvent}>
+                Simpan
+              </button>
+              <button style={styles.btn} onClick={() => setShowModal(false)}>
+                Batal
+              </button>
             </div>
-          </>
-        )}
-
-        {active === "Data Event" && (
-          <h1 style={styles.title}>Halaman Data Event</h1>
-        )}
-      </main>
-    </div>
-  );
-}
-
-function Stat({ title, value, color }) {
-  return (
-    <div style={{ ...styles.card, background: color }}>
-      <div style={styles.cardTitle}>{title}</div>
-      <div style={styles.cardValue}>{value}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 const styles = {
-  page: {
-    display: "flex",
-    minHeight: "100vh",
-    backgroundImage: `
-      linear-gradient(rgba(255,255,255,.93), rgba(255,255,255,.93)),
-      url(${bg})
-    `,
-    backgroundSize: "cover",
-  },
-
+  container: { display: "flex", height: "100vh", background: "#f5f7fb" },
   sidebar: {
-    width: "260px",
-    background: "#020617",
-    padding: "25px 15px",
+    width: "250px",
+    background: "#fff",
+    padding: "20px",
+    borderRight: "1px solid #eee",
   },
-
-  brand: {
-    color: "#fff",
-    textAlign: "center",
-    marginBottom: "30px",
+  logoBox: { display: "flex", gap: "10px", marginBottom: "30px" },
+  logoImg: { width: "35px", height: "35px" },
+  logoTitle: { fontWeight: "bold", fontSize: "14px" },
+  logoSub: { fontSize: "11px", color: "#888" },
+  menu: { display: "flex", flexDirection: "column", gap: "10px" },
+  menuItem: { padding: "10px", cursor: "pointer" },
+  menuItemActive: {
+    padding: "10px",
+    background: "#e6f4ff",
+    borderRadius: "8px",
+    color: "#1890ff",
     fontWeight: "bold",
   },
-
-  menu: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-  },
-
-  menuItem: {
-    color: "#cbd5f5",
-    padding: "12px",
+  main: { flex: 1, padding: "20px" },
+  topbar: { display: "flex", justifyContent: "space-between", marginBottom: "20px" },
+  search: { padding: "10px", width: "300px", borderRadius: "8px", border: "1px solid #ddd" },
+  actions: { display: "flex", gap: "10px" },
+  btn: {
+    padding: "10px 15px",
+    background: "#52c41a",
+    color: "#fff",
+    borderRadius: "8px",
+    border: "none",
     cursor: "pointer",
+  },
+  btnPrimary: {
+    padding: "10px 15px",
+    background: "#1890ff",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+  },
+  tableBox: { background: "#fff", borderRadius: "12px", overflow: "hidden" },
+  table: { width: "100%", borderCollapse: "collapse" },
+  th: { padding: "12px", background: "#fafafa" },
+  td: { padding: "12px", borderTop: "1px solid #eee" },
+
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    background: "rgba(0,0,0,0.4)",
     display: "flex",
+    justifyContent: "center",
     alignItems: "center",
   },
-
-  menuActive: {
-    background: "rgba(255,255,255,.05)",
-    color: "#fff",
-  },
-
-  indicator: {
-    width: "4px",
-    height: "18px",
-    background: "#3b82f6",
-    marginRight: "10px",
-  },
-
-  main: {
-    flex: 1,
-    padding: "30px",
-  },
-
-  title: {
-    fontSize: "24px",
-    marginBottom: "10px",
-  },
-
-  subtitle: {
-    marginBottom: "20px",
-  },
-
-  cards: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))",
-    gap: "20px",
-  },
-
-  card: {
+  modal: {
+    background: "#fff",
     padding: "20px",
-    borderRadius: "12px",
-    color: "#fff",
-  },
-
-  actionBar: {
+    borderRadius: "10px",
+    width: "300px",
     display: "flex",
-    justifyContent: "space-between",
-    marginBottom: "20px",
-  },
-
-  rightAction: {
-    display: "flex",
+    flexDirection: "column",
     gap: "10px",
   },
-
-  tag: {
-    background: "#2563eb",
-    color: "#fff",
-    padding: "6px 12px",
-    borderRadius: "999px",
-  },
-
-  glassBtn: {
+  input: {
     padding: "10px",
-    borderRadius: "10px",
-    backdropFilter: "blur(10px)",
-    background: "rgba(255,255,255,0.3)",
-    cursor: "pointer",
-  },
-
-  glassBtnGreen: {
-    padding: "10px",
-    borderRadius: "10px",
-    backdropFilter: "blur(10px)",
-    background: "rgba(22,163,74,0.3)",
-    cursor: "pointer",
-  },
-
-  tableModern: {
-    background: "#fff",
-    borderRadius: "12px",
-    overflow: "hidden",
-  },
-
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-  },
-
-  th: {
-    padding: "12px",
-    background: "#f1f5f9",
-  },
-
-  td: {
-    padding: "12px",
-    borderTop: "1px solid #eee",
-    textAlign: "center",
-  },
-
-  tdNamaBox: {
-    textAlign: "left",
-  },
-
-  namaUtama: {
-    fontWeight: "bold",
-  },
-
-  namaOrtu: {
-    fontSize: "13px",
-    color: "#64748b",
-  },
-
-  empty: {
-    textAlign: "center",
-    padding: "20px",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
   },
 };

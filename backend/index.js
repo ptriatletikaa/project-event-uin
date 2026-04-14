@@ -45,6 +45,14 @@ app.post("/wisudawan", (req, res) => {
   });
 });
 
+// GET USERS
+app.get("/api/users", (req, res) => {
+  db.query("SELECT * FROM users", (err, result) => {
+    if (err) return res.status(500).send(err);
+    res.json(result);
+  });
+});
+
 
 app.listen(5000, () => {
   console.log("Server berjalan di port 5000");

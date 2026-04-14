@@ -4,7 +4,7 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "html5-qrcode": "^2.3.8",
-    "mysql2": "^3.16.2"
+    "mysql2": "^3.22.0"
   },
   "name": "backend",
   "version": "1.0.0",
