@@ -5,19 +5,34 @@ import bg from "../assets/Gedung.jpg";
 function Login() {
   const [nama, setNama] = useState("");
   const [nim, setNim] = useState("");
+  const [email, setEmail] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!nama || !nim) {
-      alert("Nama dan NIM wajib diisi");
+    if (!nama || !nim || !email) {
+      alert("Semua field wajib diisi");
       return;
     }
 
-    navigate("/barcode", {
-      state: { nama, nim },
-    });
+    try {
+      await fetch("http://localhost:5000/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ nama, nim, email }),
+      });
+
+      navigate("/barcode", {
+        state: { nama, nim },
+      });
+
+    } catch (err) {
+      console.error(err);
+      alert("Gagal login");
+    }
   };
 
   return (
@@ -25,10 +40,7 @@ function Login() {
       style={{
         ...styles.page,
         backgroundImage: `
-          linear-gradient(
-            rgba(0, 0, 0, 0.35),
-            rgba(0, 0, 0, 0.35)
-          ),
+          linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)),
           url(${bg})
         `,
       }}
@@ -36,7 +48,6 @@ function Login() {
       <form style={styles.card} onSubmit={handleSubmit}>
         <h2 style={styles.title}>Login Absensi Wisuda</h2>
 
-        {/* TABEL INPUT (POTRAIT & CENTER) */}
         <div style={styles.inputGroup}>
           <div style={styles.field}>
             <label style={styles.label}>Nama</label>
@@ -56,6 +67,17 @@ function Login() {
               placeholder="Masukkan NIM"
               value={nim}
               onChange={(e) => setNim(e.target.value)}
+              style={styles.input}
+            />
+          </div>
+
+          <div style={styles.field}>
+            <label style={styles.label}>Email</label>
+            <input
+              type="email"
+              placeholder="Masukkan Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               style={styles.input}
             />
           </div>
@@ -84,18 +106,16 @@ const styles = {
     width: "320px",
     padding: "30px",
     borderRadius: "16px",
-    background: "rgba(255, 255, 255, 0.25)",
+    background: "rgba(255,255,255,0.25)",
     backdropFilter: "blur(12px)",
     WebkitBackdropFilter: "blur(12px)",
-    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
+    boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
     textAlign: "center",
   },
   title: {
     marginBottom: "20px",
     color: "#111",
   },
-
-  /* === BAGIAN YANG DIRAPIKAN === */
   inputGroup: {
     display: "flex",
     flexDirection: "column",
@@ -118,7 +138,6 @@ const styles = {
     border: "none",
     outline: "none",
   },
-
   button: {
     width: "100%",
     padding: "11px",

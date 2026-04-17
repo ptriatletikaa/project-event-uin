@@ -158,7 +158,7 @@ Jurusan: ${u.jurusan}
                     accept=".xlsx, .xls"
                     onChange={handleImportExcel}
                     style={{ display: "none" }}
-                  />
+                  /> 
                 </label>
 
                 <button style={styles.btn} onClick={buatUndangan}>
@@ -180,30 +180,29 @@ Jurusan: ${u.jurusan}
         <div style={styles.tableBox}>
           <table style={styles.table}>
             {/* USER */}
-            {active === "User" && (
-              <>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>ID</th>
-                    <th style={styles.th}>Username</th>
-                    <th style={styles.th}>Email</th>
-                    <th style={styles.th}>Password</th>
-                  </tr>
-                </thead>
+           {active === "User" && (
+  <>
+    <thead>
+      <tr>
+        <th style={styles.th}>ID</th>
+        <th style={styles.th}>Nama</th>
+        <th style={styles.th}>NIM</th>
+        <th style={styles.th}>Email</th>
+      </tr>
+    </thead>
 
-                <tbody>
-                  {dataUser.map((user, index) => (
-                    <tr key={index}>
-                      <td style={styles.td}>{user.id}</td>
-                      <td style={styles.td}>{user.username}</td>
-                      <td style={styles.td}>{user.email}</td>
-                      <td style={styles.td}>{user.password}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </>
-            )}
-
+    <tbody>
+      {dataUser.map((user, index) => (
+        <tr key={index}>
+          <td style={styles.td}>{user.id}</td>
+          <td style={styles.td}>{user.nama}</td>
+          <td style={styles.td}>{user.nim}</td>
+          <td style={styles.td}>{user.email}</td>
+        </tr>
+      ))}
+    </tbody>
+  </>
+)}
             {/* EVENT */}
             {active === "Event" && (
               <>
