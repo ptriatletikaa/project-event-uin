@@ -1,17 +1,22 @@
 {
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Absensi Event Backend API",
+  "main": "Server.js",
+  "scripts": {
+    "start": "node Server.js",
+    "dev": "node Server.js"
+  },
   "dependencies": {
+    "bcrypt": "^5.1.1",
     "body-parser": "^2.2.2",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "html5-qrcode": "^2.3.8",
-    "mysql2": "^3.22.0"
-  },
-  "name": "backend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.2",
+    "mysql2": "^3.22.0",
+    "xlsx": "^0.18.5"
   },
   "keywords": [],
   "author": "",

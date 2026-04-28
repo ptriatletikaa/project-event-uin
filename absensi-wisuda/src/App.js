@@ -1,34 +1,47 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
 
-// MAHASISWA
-import Login from "./pages/Login";
-import Barcode from "./pages/Barcode";
+import LoginAdmin from "./pages/admin/LoginAdmin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserManagement from "./pages/admin/UserManagement";
+import EventManagement from "./pages/admin/EventManagement";
+import EventDetail from "./pages/admin/EventDetail";
 
-// PANITIA
-import LoginPanitia from "./pages/LoginPanitia";
-import ScanPanitia from "./pages/ScanPanitia";
+import LoginLapangan from "./pages/lapangan/LoginLapangan";
+import ChangePassword from "./pages/lapangan/ChangePassword";
+import EventSelect from "./pages/lapangan/EventSelect";
+import Scan from "./pages/lapangan/Scan";
+import ManualCheckin from "./pages/lapangan/ManualCheckin";
+import History from "./pages/lapangan/History";
 
-// ADMINN
-import LoginAdmin from "./pages/LoginAdmin";
-import AdminDashboard from "./pages/AdminDashboard";
+import LoginUndangan from "./pages/undangan/LoginUndangan";
+import QrDisplay from "./pages/undangan/QrDisplay";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* ===== MAHASISWA ===== */}
-        <Route path="/" element={<Login />} />
-        <Route path="/barcode" element={<Barcode />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/undangan/login" element={<LoginUndangan />} />
+          <Route path="/undangan/qr" element={<QrDisplay />} />
 
-        {/* ===== PANITIA ===== */}
-        <Route path="/panitia" element={<LoginPanitia />} />
-        <Route path="/panitia/scan" element={<ScanPanitia />} />
+          <Route path="/login" element={<LoginAdmin />} />
 
-        {/* ===== ADMINNN ===== */}
-        <Route path="/admin/login" element={<LoginAdmin />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/users" element={<UserManagement />} />
+          <Route path="/admin/events" element={<EventManagement />} />
+          <Route path="/admin/events/:id" element={<EventDetail />} />
 
-      </Routes>
-    </BrowserRouter>
+          <Route path="/lapangan/login" element={<LoginLapangan />} />
+          <Route path="/lapangan/change-password" element={<ChangePassword />} />
+          <Route path="/lapangan/event-select" element={<EventSelect />} />
+          <Route path="/lapangan/scan/:id" element={<Scan />} />
+          <Route path="/lapangan/manual/:id" element={<ManualCheckin />} />
+          <Route path="/lapangan/history/:id" element={<History />} />
+
+          <Route path="/" element={<Navigate to="/undangan/login" />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
