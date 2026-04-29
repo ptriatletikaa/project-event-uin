@@ -41,23 +41,29 @@ export default function LoginAdmin() {
 
         {error && <div style={styles.error}>{error}</div>}
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={styles.input}
-          required
-        />
+        <div style={styles.field}>
+          <label style={styles.label}>Email</label>
+          <input
+            type="email"
+            placeholder="masukkan email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={styles.input}
+            required
+          />
+        </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={styles.input}
-          required
-        />
+        <div style={styles.field}>
+          <label style={styles.label}>Password</label>
+          <input
+            type="password"
+            placeholder="masukkan password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={styles.input}
+            required
+          />
+        </div>
 
         <button type="submit" style={styles.button} disabled={loading}>
           {loading ? "Loading..." : "Login"}
@@ -88,6 +94,8 @@ const styles = {
   title: { color: "#fff", textAlign: "center", marginBottom: "4px", fontSize: "24px" },
   subtitle: { color: "#94a3b8", textAlign: "center", marginBottom: "24px", fontSize: "14px" },
   error: { background: "#ef4444", color: "#fff", padding: "10px 14px", borderRadius: "8px", marginBottom: "16px", fontSize: "14px", textAlign: "center" },
-  input: { width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.1)", color: "#fff", marginBottom: "12px", fontSize: "14px", boxSizing: "border-box" },
+  input: { width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.1)", color: "#fff", fontSize: "14px", boxSizing: "border-box" },
+  field: { marginBottom: "16px" },
+  label: { display: "block", color: "#94a3b8", fontSize: "13px", fontWeight: "600", marginBottom: "6px" },
   button: { width: "100%", padding: "12px", borderRadius: "8px", border: "none", background: "#2563eb", color: "#fff", fontSize: "15px", fontWeight: "bold", cursor: "pointer", marginTop: "8px" },
 };

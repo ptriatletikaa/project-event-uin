@@ -49,15 +49,19 @@ export default function EventDetail() {
     const file = e.target.files[0];
     if (!file) return;
 
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+      alert("File harus format Excel (.xlsx atau .xls)");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 
-    api.post(`/events/${id}/invited-users/bulk`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    })
-      .then(() => {
-        alert("Import berhasil!");
+    api.post(`/events/${id}/invited-users/bulk`, formData)
+      .then((res) => {
+        alert("Berhasil import " + res.data.message);
         loadData();
+        e.target.value = "";
       })
       .catch((err) => {
         alert(err.response?.data?.message || "Import gagal");
@@ -77,7 +81,7 @@ export default function EventDetail() {
   };
 
   const handleDeleteInvited = async (invitedId) => {
-    if (!confirm("Hapus undangan ini?")) return;
+    if (!window.confirm("Hapus undangan ini?")) return;
     try {
       await api.delete(`/invited-users/${invitedId}`);
       loadData();
@@ -256,13 +260,25 @@ export default function EventDetail() {
           <div style={styles.modal}>
             <h2 style={styles.modalTitle}>Tambah Undangan</h2>
             <form onSubmit={handleAddInvited}>
-              <input type="text" placeholder="Nama" value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} style={styles.input} required />
-              <input type="text" placeholder="NIM/NIK" value={form.nim_nik} onChange={(e) => setForm({ ...form, nim_nik: e.target.value })} style={styles.input} required />
-              <input type="email" placeholder="Email (opsional)" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={styles.input} />
-              <select value={form.kategori} onChange={(e) => setForm({ ...form, kategori: e.target.value })} style={styles.input}>
-                <option value="Normal">Normal</option>
-                <option value="VIP">VIP</option>
-              </select>
+              <div style={styles.fieldGroup}>
+                <label style={styles.fieldLabel}>Nama</label>
+                <input type="text" placeholder="masukkan nama" value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} style={styles.input} required />
+              </div>
+              <div style={styles.fieldGroup}>
+                <label style={styles.fieldLabel}>NIM/NIK</label>
+                <input type="text" placeholder="masukkan NIM/NIK" value={form.nim_nik} onChange={(e) => setForm({ ...form, nim_nik: e.target.value })} style={styles.input} required />
+              </div>
+              <div style={styles.fieldGroup}>
+                <label style={styles.fieldLabel}>Email (opsional)</label>
+                <input type="email" placeholder="masukkan email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={styles.input} />
+              </div>
+              <div style={styles.fieldGroup}>
+                <label style={styles.fieldLabel}>Kategori</label>
+                <select value={form.kategori} onChange={(e) => setForm({ ...form, kategori: e.target.value })} style={styles.input}>
+                  <option value="Normal">Normal</option>
+                  <option value="VIP">VIP</option>
+                </select>
+              </div>
               <div style={styles.modalActions}>
                 <button type="submit" style={styles.btnPrimary}>Simpan</button>
                 <button type="button" style={styles.btnSecondary} onClick={() => setShowAddModal(false)}>Batal</button>
@@ -329,7 +345,9 @@ const styles = {
   modalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 },
   modal: { background: "#fff", padding: "24px", borderRadius: "12px", width: "400px", maxWidth: "90vw" },
   modalTitle: { fontSize: "18px", fontWeight: "bold", marginBottom: "16px", color: "#0f172a" },
-  input: { width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "14px", marginBottom: "12px", boxSizing: "border-box" },
+  input: { width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "14px", boxSizing: "border-box" },
+  fieldGroup: { marginBottom: "12px" },
+  fieldLabel: { display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "4px" },
   modalActions: { display: "flex", gap: "8px", marginTop: "16px" },
   btnPrimary: { padding: "10px 16px", borderRadius: "8px", border: "none", background: "#2563eb", color: "#fff", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
   btnSecondary: { padding: "10px 16px", borderRadius: "8px", border: "1px solid #e2e8f0", background: "#fff", color: "#0f172a", fontSize: "14px", cursor: "pointer" },
