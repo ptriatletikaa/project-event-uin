@@ -59,19 +59,22 @@ export default function ManualCheckin() {
         <h1 style={styles.title}>Manual Check-in</h1>
       </div>
 
-      <div style={styles.searchBox}>
-        <input
-          type="text"
-          placeholder="Cari Nama atau NIM/NIK..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={styles.searchInput}
-          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-        />
-        <button style={styles.searchBtn} onClick={handleSearch} disabled={loading}>
-          {loading ? "..." : "Cari"}
-        </button>
-      </div>
+<div style={styles.fieldGroup}>
+          <label style={styles.fieldLabel}>Cari Nama atau NIM/NIK</label>
+          <div style={styles.searchBox}>
+            <input
+              type="text"
+              placeholder="ketik nama atau NIM/NIK..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={styles.searchInput}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            />
+            <button style={styles.searchBtn} onClick={handleSearch} disabled={loading}>
+              {loading ? "..." : "Cari"}
+            </button>
+          </div>
+        </div>
 
       {error && <p style={styles.error}>{error}</p>}
 
@@ -131,6 +134,8 @@ const styles = {
   title: { fontSize: "20px", fontWeight: "bold", color: "#0f172a" },
   searchBox: { display: "flex", gap: "8px", marginBottom: "16px" },
   searchInput: { flex: 1, padding: "12px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px" },
+  fieldGroup: { marginBottom: "16px" },
+  fieldLabel: { display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "6px" },
   searchBtn: { padding: "12px 24px", borderRadius: "10px", border: "none", background: "#10b981", color: "#fff", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
   error: { textAlign: "center", color: "#ef4444", padding: "12px", marginBottom: "16px" },
   results: { display: "flex", flexDirection: "column", gap: "8px", marginBottom: "20px" },

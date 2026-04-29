@@ -66,7 +66,7 @@ export default function UserManagement() {
   };
 
   const handleResetPassword = async (id) => {
-    if (!confirm("Reset password ke 'password123'?")) return;
+    if (!window.confirm("Reset password ke 'password123'?")) return;
     try {
       await api.put(`/users/${id}/reset-password`);
       alert("Password berhasil direset");
@@ -76,12 +76,12 @@ export default function UserManagement() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Nonaktifkan user ini?")) return;
+    if (!window.confirm("Hapus user ini? Data user akan dihapus permanen.")) return;
     try {
       await api.delete(`/users/${id}`);
       loadUsers();
     } catch (err) {
-      alert(err.response?.data?.message || "Gagal menghapus");
+      alert(err.response?.data?.message || "Gagal menghapus user");
     }
   };
 
@@ -164,15 +164,27 @@ export default function UserManagement() {
             <div style={styles.modal}>
               <h2 style={styles.modalTitle}>{editingUser ? "Edit User" : "Tambah User"}</h2>
               <form onSubmit={handleSubmit}>
-                <input type="text" placeholder="Nama" value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} style={styles.input} required />
-                <input type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={styles.input} required />
+                <div style={styles.fieldGroup}>
+                  <label style={styles.fieldLabel}>Nama</label>
+                  <input type="text" placeholder="masukkan nama" value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} style={styles.input} required />
+                </div>
+                <div style={styles.fieldGroup}>
+                  <label style={styles.fieldLabel}>Email</label>
+                  <input type="email" placeholder="masukkan email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} style={styles.input} required />
+                </div>
                 {!editingUser && (
-                  <input type="password" placeholder="Password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} style={styles.input} required />
+                  <div style={styles.fieldGroup}>
+                    <label style={styles.fieldLabel}>Password</label>
+                    <input type="password" placeholder="masukkan password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} style={styles.input} required />
+                  </div>
                 )}
-                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} style={styles.input}>
-                  <option value="admin_lapangan">Admin Lapangan</option>
-                  <option value="admin_sistem">Admin Sistem</option>
-                </select>
+                <div style={styles.fieldGroup}>
+                  <label style={styles.fieldLabel}>Role</label>
+                  <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} style={styles.input}>
+                    <option value="admin_lapangan">Admin Lapangan</option>
+                    <option value="admin_sistem">Admin Sistem</option>
+                  </select>
+                </div>
                 <div style={styles.modalActions}>
                   <button type="submit" style={styles.btnPrimary}>Simpan</button>
                   <button type="button" style={styles.btnSecondary} onClick={() => setShowModal(false)}>Batal</button>
@@ -217,7 +229,9 @@ const styles = {
   modalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 },
   modal: { background: "#fff", padding: "24px", borderRadius: "12px", width: "400px", maxWidth: "90vw" },
   modalTitle: { fontSize: "18px", fontWeight: "bold", marginBottom: "16px", color: "#0f172a" },
-  input: { width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "14px", marginBottom: "12px", boxSizing: "border-box" },
+  input: { width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "14px", boxSizing: "border-box" },
+  fieldGroup: { marginBottom: "12px" },
+  fieldLabel: { display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "4px" },
   modalActions: { display: "flex", gap: "8px", marginTop: "16px" },
   btnSecondary: { padding: "10px 16px", borderRadius: "8px", border: "1px solid #e2e8f0", background: "#fff", color: "#0f172a", fontSize: "14px", cursor: "pointer" },
 };

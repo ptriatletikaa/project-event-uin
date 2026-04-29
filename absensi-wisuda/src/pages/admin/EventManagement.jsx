@@ -82,12 +82,12 @@ export default function EventManagement() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Hapus event ini?")) return;
+    if (!window.confirm("Hapus event ini? Semua undangan terkait juga akan dihapus.")) return;
     try {
       await api.delete(`/events/${id}`);
       loadEvents();
     } catch (err) {
-      alert("Gagal menghapus");
+      alert(err.response?.data?.message || "Gagal menghapus");
     }
   };
 
@@ -117,7 +117,10 @@ export default function EventManagement() {
       <main style={styles.main}>
         <div style={styles.header}>
           <h1 style={styles.pageTitle}>Event Management</h1>
-          <button style={styles.btnPrimary} onClick={openAddModal}>+ Tambah Event</button>
+          <div style={styles.headerActions}>
+            <button style={styles.btnScan} onClick={() => navigate("/lapangan/event-select")}>📷 Scan QR</button>
+            <button style={styles.btnPrimary} onClick={openAddModal}>+ Tambah Event</button>
+          </div>
         </div>
 
         <div style={styles.tableBox}>
@@ -170,22 +173,46 @@ export default function EventManagement() {
             <div style={styles.modal}>
               <h2 style={styles.modalTitle}>{editingEvent ? "Edit Event" : "Tambah Event"}</h2>
               <form onSubmit={handleSubmit}>
-                <input type="text" placeholder="Nama Event" value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} style={styles.input} required />
-                <div style={styles.row}>
-                  <input type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} style={styles.input} required />
-                  <input type="number" placeholder="Kapasitas" value={form.kapasitas} onChange={(e) => setForm({ ...form, kapasitas: e.target.value })} style={styles.input} required />
+                <div style={styles.fieldGroup}>
+                  <label style={styles.fieldLabel}>Nama Event</label>
+                  <input type="text" placeholder="masukkan nama event" value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} style={styles.input} required />
                 </div>
                 <div style={styles.row}>
-                  <input type="time" value={form.waktu_mulai} onChange={(e) => setForm({ ...form, waktu_mulai: e.target.value })} style={styles.input} required />
-                  <input type="time" value={form.waktu_selesai} onChange={(e) => setForm({ ...form, waktu_selesai: e.target.value })} style={styles.input} required />
+                  <div style={styles.fieldGroup}>
+                    <label style={styles.fieldLabel}>Tanggal</label>
+                    <input type="date" value={form.tanggal} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} style={styles.input} required />
+                  </div>
+                  <div style={styles.fieldGroup}>
+                    <label style={styles.fieldLabel}>Kapasitas</label>
+                    <input type="number" placeholder="jumlah" value={form.kapasitas} onChange={(e) => setForm({ ...form, kapasitas: e.target.value })} style={styles.input} required />
+                  </div>
                 </div>
-                <input type="text" placeholder="Lokasi" value={form.lokasi} onChange={(e) => setForm({ ...form, lokasi: e.target.value })} style={styles.input} required />
-                <textarea placeholder="Deskripsi (opsional)" value={form.deskripsi} onChange={(e) => setForm({ ...form, deskripsi: e.target.value })} style={{ ...styles.input, minHeight: "60px" }} />
-                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} style={styles.input}>
-                  <option value="draft">Draft</option>
-                  <option value="active">Active</option>
-                  <option value="selesai">Selesai</option>
-                </select>
+                <div style={styles.row}>
+                  <div style={styles.fieldGroup}>
+                    <label style={styles.fieldLabel}>Waktu Mulai</label>
+                    <input type="time" value={form.waktu_mulai} onChange={(e) => setForm({ ...form, waktu_mulai: e.target.value })} style={styles.input} required />
+                  </div>
+                  <div style={styles.fieldGroup}>
+                    <label style={styles.fieldLabel}>Waktu Selesai</label>
+                    <input type="time" value={form.waktu_selesai} onChange={(e) => setForm({ ...form, waktu_selesai: e.target.value })} style={styles.input} required />
+                  </div>
+                </div>
+                <div style={styles.fieldGroup}>
+                  <label style={styles.fieldLabel}>Lokasi</label>
+                  <input type="text" placeholder="masukkan lokasi" value={form.lokasi} onChange={(e) => setForm({ ...form, lokasi: e.target.value })} style={styles.input} required />
+                </div>
+                <div style={styles.fieldGroup}>
+                  <label style={styles.fieldLabel}>Deskripsi (opsional)</label>
+                  <textarea placeholder="deskripsi event" value={form.deskripsi} onChange={(e) => setForm({ ...form, deskripsi: e.target.value })} style={{ ...styles.input, minHeight: "60px" }} />
+                </div>
+                <div style={styles.fieldGroup}>
+                  <label style={styles.fieldLabel}>Status</label>
+                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} style={styles.input}>
+                    <option value="draft">Draft</option>
+                    <option value="active">Active</option>
+                    <option value="selesai">Selesai</option>
+                  </select>
+                </div>
                 <div style={styles.checkboxGroup}>
                   <label style={styles.checkboxLabel}>Assign Admin Lapangan:</label>
                   <div style={styles.checkboxList}>
@@ -233,6 +260,8 @@ const styles = {
   main: { flex: 1, padding: "24px 32px" },
   header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" },
   pageTitle: { fontSize: "24px", fontWeight: "bold", color: "#0f172a" },
+  headerActions: { display: "flex", gap: "10px" },
+  btnScan: { padding: "10px 16px", borderRadius: "8px", border: "none", background: "#10b981", color: "#fff", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
   btnPrimary: { padding: "10px 16px", borderRadius: "8px", border: "none", background: "#2563eb", color: "#fff", fontSize: "14px", fontWeight: "bold", cursor: "pointer" },
   tableBox: { background: "#fff", borderRadius: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", overflow: "hidden" },
   table: { width: "100%", borderCollapse: "collapse" },
@@ -247,7 +276,9 @@ const styles = {
   modalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 },
   modal: { background: "#fff", padding: "24px", borderRadius: "12px", width: "500px", maxWidth: "90vw", maxHeight: "90vh", overflowY: "auto" },
   modalTitle: { fontSize: "18px", fontWeight: "bold", marginBottom: "16px", color: "#0f172a" },
-  input: { width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "14px", marginBottom: "12px", boxSizing: "border-box" },
+  input: { width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "14px", boxSizing: "border-box" },
+  fieldGroup: { marginBottom: "12px" },
+  fieldLabel: { display: "block", fontSize: "13px", fontWeight: "600", color: "#334155", marginBottom: "4px" },
   row: { display: "flex", gap: "12px" },
   modalActions: { display: "flex", gap: "8px", marginTop: "16px" },
   btnSecondary: { padding: "10px 16px", borderRadius: "8px", border: "1px solid #e2e8f0", background: "#fff", color: "#0f172a", fontSize: "14px", cursor: "pointer" },

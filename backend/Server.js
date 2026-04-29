@@ -4,10 +4,16 @@ const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const multer = require("multer");
+const XLSX = require("xlsx");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 const db = mysql.createConnection({
   host: "localhost",
@@ -191,9 +197,51 @@ app.put("/api/events/:id", (req, res) => {
 });
 
 app.delete("/api/events/:id", (req, res) => {
-  db.query("DELETE FROM events WHERE id = ?", [req.params.id], (err, result) => {
-    if (err) return res.status(500).json({ message: "Server error" });
-    res.json({ message: "Event berhasil dihapus" });
+  const eventId = req.params.id;
+
+  db.query("SET FOREIGN_KEY_CHECKS=0", () => {
+    db.query("DELETE FROM checkin_logs WHERE event_id = ?", [eventId], (err) => {
+      if (err) {
+        console.error("Error deleting checkin_logs:", err.message);
+        db.query("SET FOREIGN_KEY_CHECKS=1");
+        return res.status(500).json({ message: "Gagal menghapus data check-in logs" });
+      }
+
+      db.query("DELETE FROM invited_users WHERE event_id = ?", [eventId], (err2) => {
+        if (err2) {
+          console.error("Error deleting invited_users:", err2.message);
+          db.query("SET FOREIGN_KEY_CHECKS=1");
+          return res.status(500).json({ message: "Gagal menghapus data undangan" });
+        }
+
+        db.query("DELETE FROM undangan WHERE event_id = ?", [eventId], (err2b) => {
+          if (err2b) {
+            console.error("Error deleting undangan:", err2b.message);
+          }
+
+          db.query("DELETE FROM event_admins WHERE event_id = ?", [eventId], (err3) => {
+            if (err3) {
+              console.error("Error deleting event_admins:", err3.message);
+              db.query("SET FOREIGN_KEY_CHECKS=1");
+              return res.status(500).json({ message: "Gagal menghapus data admin event" });
+            }
+
+            db.query("DELETE FROM events WHERE id = ?", [eventId], (err4, result) => {
+              db.query("SET FOREIGN_KEY_CHECKS=1");
+
+              if (err4) {
+                console.error("Error deleting event:", err4.message);
+                return res.status(500).json({ message: "Gagal menghapus event" });
+              }
+              if (result.affectedRows === 0) {
+                return res.status(404).json({ message: "Event tidak ditemukan" });
+              }
+              res.json({ message: "Event berhasil dihapus" });
+            });
+          });
+        });
+      });
+    });
   });
 });
 
@@ -256,9 +304,76 @@ app.post("/api/events/:eventId/invited-users", (req, res) => {
 });
 
 app.delete("/api/invited-users/:id", (req, res) => {
-  db.query("DELETE FROM invited_users WHERE id = ?", [req.params.id], (err, result) => {
-    if (err) return res.status(500).json({ message: "Server error" });
-    res.json({ message: "Undangan berhasil dihapus" });
+  const userId = req.params.id;
+
+  db.query("DELETE FROM checkin_logs WHERE invited_user_id = ?", [userId], (err) => {
+    if (err) {
+      console.error("Error deleting checkin_logs:", err.message);
+      return res.status(500).json({ message: "Gagal menghapus data check-in" });
+    }
+
+    db.query("DELETE FROM invited_users WHERE id = ?", [userId], (err2, result) => {
+      if (err2) {
+        console.error("Error deleting invited_user:", err2.message);
+        return res.status(500).json({ message: "Gagal menghapus undangan" });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Undangan tidak ditemukan" });
+      }
+      res.json({ message: "Undangan berhasil dihapus" });
+    });
+  });
+});
+
+app.post("/api/events/:eventId/invited-users/bulk", (req, res) => {
+  upload(req, res, (err) => {
+    if (err || !req.file) {
+      return res.status(400).json({ message: "File Excel wajib diupload" });
+    }
+
+    try {
+      const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet);
+
+      if (json.length === 0) {
+        return res.status(400).json({ message: "File Excel kosong" });
+      }
+
+      const eventId = req.params.eventId;
+
+      const invited = json.map(row => {
+        const nama = row.Nama || row.nama || "";
+        const nim_nik = row.NIM || row.NIK || row.nim_nik || "";
+        const email = row.Email || row.email || "";
+        const kategori = row.Kategori || row.kategori || "Normal";
+
+        if (!nama || !nim_nik) return null;
+
+        return [
+          nama,
+          String(nim_nik),
+          email,
+          parseInt(eventId),
+          kategori,
+          crypto.randomBytes(16).toString("hex")
+        ];
+      }).filter(Boolean);
+
+      if (invited.length === 0) {
+        return res.status(400).json({ message: "Data tidak valid. Pastikan ada kolom Nama dan NIM/NIK" });
+      }
+
+      db.query("INSERT INTO invited_users (nama, nim_nik, email, event_id, kategori, qr_code) VALUES ?", [invited], (err, result) => {
+        if (err) {
+          if (err.code === "ER_DUP_ENTRY") return res.status(400).json({ message: "Beberapa NIM/NIK sudah terdaftar" });
+          return res.status(500).json({ message: "Server error" });
+        }
+        res.status(201).json({ message: `Berhasil import ${result.affectedRows} undangan` });
+      });
+    } catch (err) {
+      return res.status(500).json({ message: "Gagal membaca file Excel" });
+    }
   });
 });
 
@@ -421,9 +536,49 @@ app.put("/api/users/:id", (req, res) => {
 });
 
 app.delete("/api/users/:id", (req, res) => {
-  db.query("UPDATE users SET status = 'inactive' WHERE id = ? AND role != 'admin_sistem'", [req.params.id], (err, result) => {
-    if (err) return res.status(500).json({ message: "Server error" });
-    res.json({ message: "User berhasil dinonaktifkan" });
+  const userId = req.params.id;
+
+  if (parseInt(userId) === 1) {
+    return res.status(403).json({ message: "Tidak bisa menghapus admin utama" });
+  }
+
+  db.query("SET FOREIGN_KEY_CHECKS=0", () => {
+    db.query("DELETE FROM checkin_logs WHERE admin_lapangan_id = ?", [userId], (err) => {
+      if (err) {
+        console.error("Error deleting checkin_logs:", err.message);
+        db.query("SET FOREIGN_KEY_CHECKS=1");
+        return res.status(500).json({ message: "Gagal menghapus data check-in" });
+      }
+
+      db.query("UPDATE invited_users SET scanned_by = NULL WHERE scanned_by = ?", [userId], (err2) => {
+        if (err2) {
+          console.error("Error updating invited_users:", err2.message);
+          db.query("SET FOREIGN_KEY_CHECKS=1");
+          return res.status(500).json({ message: "Gagal menghapus data undangan" });
+        }
+
+        db.query("DELETE FROM event_admins WHERE admin_lapangan_id = ?", [userId], (err3) => {
+          if (err3) {
+            console.error("Error deleting event_admins:", err3.message);
+            db.query("SET FOREIGN_KEY_CHECKS=1");
+            return res.status(500).json({ message: "Gagal menghapus data admin event" });
+          }
+
+          db.query("DELETE FROM users WHERE id = ?", [userId], (err4, result) => {
+            db.query("SET FOREIGN_KEY_CHECKS=1");
+
+            if (err4) {
+              console.error("Error deleting user:", err4.message);
+              return res.status(500).json({ message: "Gagal menghapus user" });
+            }
+            if (result.affectedRows === 0) {
+              return res.status(404).json({ message: "User tidak ditemukan" });
+            }
+            res.json({ message: "User berhasil dihapus" });
+          });
+        });
+      });
+    });
   });
 });
 

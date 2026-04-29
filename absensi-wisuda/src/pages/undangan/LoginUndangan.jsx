@@ -29,21 +29,24 @@ export default function LoginUndangan() {
     <div style={styles.page}>
       <form style={styles.card} onSubmit={handleSubmit}>
         <div style={styles.logoArea}>
-          <div style={styles.logo}>🎓</div>
-          <h2 style={styles.title}>Absensi Wisuda</h2>
+          <div style={styles.logo}>🔐</div>
+          <h2 style={styles.title}>Absensi Event</h2>
           <p style={styles.subtitle}>Masukkan NIM/NIK Anda untuk login</p>
         </div>
 
         {error && <div style={styles.error}>{error}</div>}
 
-        <input
-          type="text"
-          placeholder="NIM / NIK"
-          value={nim_nik}
-          onChange={(e) => setNim_nik(e.target.value)}
-          style={styles.input}
-          required
-        />
+        <div style={styles.field}>
+          <label style={styles.label}>NIM / NIK</label>
+          <input
+            type="text"
+            placeholder="masukkan NIM atau NIK"
+            value={nim_nik}
+            onChange={(e) => setNim_nik(e.target.value)}
+            style={styles.input}
+            required
+          />
+        </div>
 
         <button type="submit" style={styles.button} disabled={loading}>
           {loading ? "Memproses..." : "Login & Lihat QR"}
@@ -61,6 +64,8 @@ const styles = {
   title: { color: "#fff", fontSize: "26px", fontWeight: "bold", marginBottom: "6px" },
   subtitle: { color: "#93c5fd", fontSize: "14px" },
   error: { background: "#ef4444", color: "#fff", padding: "10px 14px", borderRadius: "10px", marginBottom: "16px", fontSize: "14px" },
-  input: { width: "100%", padding: "14px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.1)", color: "#fff", marginBottom: "16px", fontSize: "16px", boxSizing: "border-box", textAlign: "center" },
+  input: { width: "100%", padding: "14px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.1)", color: "#fff", fontSize: "16px", boxSizing: "border-box" },
+  field: { marginBottom: "20px" },
+  label: { display: "block", color: "#93c5fd", fontSize: "14px", fontWeight: "600", marginBottom: "8px", textAlign: "left" },
   button: { width: "100%", padding: "14px", borderRadius: "10px", border: "none", background: "#3b82f6", color: "#fff", fontSize: "16px", fontWeight: "bold", cursor: "pointer" },
 };

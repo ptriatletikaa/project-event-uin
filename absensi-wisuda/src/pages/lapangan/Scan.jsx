@@ -16,15 +16,15 @@ export default function Scan() {
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraMessage, setCameraMessage] = useState("Memuat kamera...");
   const [loading, setLoading] = useState(true);
-  const [debugMode, setDebugMode] = useState(false);
-  const [lastQr, setLastQr] = useState(null);
-  const [scanCount, setScanCount] = useState(0);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const animFrameRef = useRef(null);
   const lastScanTime = useRef(0);
+  const lastQrRef = useRef(null);
+  const scanningRef = useRef(false);
+  const cameraActiveRef = useRef(false);
 
   useEffect(() => {
     if (!user) {
@@ -64,6 +64,9 @@ export default function Scan() {
   };
 
   const cleanupCamera = () => {
+    cameraActiveRef.current = false;
+    scanningRef.current = false;
+
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
@@ -101,18 +104,23 @@ export default function Scan() {
         await videoRef.current.play();
 
         setCameraOn(true);
+        cameraActiveRef.current = true;
+
         showNotification("📷 Kamera aktif! Siap scan QR.", "success", 2000);
 
-        if (canvasRef.current) {
-          canvasRef.current.width = videoRef.current.videoWidth || 640;
-          canvasRef.current.height = videoRef.current.videoHeight || 480;
-        }
-
-        startScanning();
+        setTimeout(() => {
+          if (canvasRef.current) {
+            canvasRef.current.width = videoRef.current?.videoWidth || 640;
+            canvasRef.current.height = videoRef.current?.videoHeight || 480;
+          }
+          startScanning();
+        }, 500);
       }
     } catch (err) {
+      if (err.name === "AbortError") return;
       console.error("Camera error:", err);
       setCameraOn(false);
+      cameraActiveRef.current = false;
 
       if (err.name === "NotAllowedError") {
         setCameraMessage("Izin ditolak. Klik 🔒 di URL, allow Camera.");
@@ -127,34 +135,44 @@ export default function Scan() {
   };
 
   const startScanning = () => {
+    if (scanningRef.current) return;
+    scanningRef.current = true;
+
+    console.log("🔍 Scanning dimulai...");
+
     const scan = () => {
-      if (!cameraOn || !videoRef.current || !canvasRef.current) return;
+      if (!cameraActiveRef.current) {
+        scanningRef.current = false;
+        return;
+      }
 
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
-      if (video.readyState >= 2) {
+      if (video && canvas && video.readyState >= 2 && video.videoWidth > 0) {
         try {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+
           const ctx = canvas.getContext("2d", { willReadFrequently: true });
-          canvas.width = video.videoWidth || 640;
-          canvas.height = video.videoHeight || 480;
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, canvas.width, canvas.height, {
+            inversionAttempts: "dontInvert"
+          });
 
-          if (code?.data) {
+          if (code && code.data) {
             const now = Date.now();
-            if (code.data !== lastQr || now - lastScanTime.current > 3000) {
-              setLastQr(code.data);
+            if (code.data !== lastQrRef.current || now - lastScanTime.current > 3000) {
+              lastQrRef.current = code.data;
               lastScanTime.current = now;
-              setScanCount(prev => prev + 1);
               console.log("🎯 QR DETECTED:", code.data);
               handleCheckin(code.data);
             }
           }
         } catch (err) {
-          console.error("Scan error:", err);
+          console.error("Scan frame error:", err);
         }
       }
 
@@ -165,14 +183,14 @@ export default function Scan() {
   };
 
   const handleCheckin = async (qrCode) => {
-    showNotification(`🔍 scanning: ${qrCode.substring(0, 20)}...`, "success", 1500);
+    showNotification("🔍 Memproses QR Code...", "success", 1500);
 
     try {
-      console.log("Sending checkin with qr_code:", qrCode);
+      console.log("📡 Sending checkin with qr_code:", qrCode);
 
       const res = await api.post("/checkin", { qr_code: qrCode });
 
-      console.log("Checkin response:", res.data);
+      console.log("✅ Checkin response:", res.data);
 
       if (res.data.success) {
         showNotification("✅ BERHASIL! " + res.data.message, "success");
@@ -181,15 +199,15 @@ export default function Scan() {
         }
         loadData();
       } else {
-        showNotification("❌ Gagal: " + (res.data.message || "Unknown error"), "error");
+        showNotification("❌ " + res.data.message, "error");
       }
     } catch (err) {
-      console.error("Checkin error:", err.response?.data);
+      console.error("❌ Checkin error:", err.response?.data);
       const msg = err.response?.data?.message || "QR tidak dikenali di sistem";
       showNotification("❌ " + msg, "error");
     }
 
-    setTimeout(() => { setLastQr(null); }, 3000);
+    setTimeout(() => { lastQrRef.current = null; }, 3000);
   };
 
   const handleRetry = () => {
@@ -270,18 +288,6 @@ export default function Scan() {
         <p style={styles.hint}>
           {cameraOn ? "📷 Arahkan QR Code ke kotak hijau" : "Kamera belum aktif"}
         </p>
-
-        {debugMode && (
-          <div style={styles.debugBox}>
-            <div style={styles.debugTitle}>🔧 DEBUG MODE</div>
-            <div>Last QR: <code>{lastQr || "-"}</code></div>
-            <div>Scan count: {scanCount}</div>
-            <button style={styles.debugToggle} onClick={() => setDebugMode(false)}>Hide Debug</button>
-          </div>
-        )}
-        {!debugMode && (
-          <button style={styles.debugToggle} onClick={() => setDebugMode(true)}>🔧 Debug</button>
-        )}
       </div>
 
       <div style={styles.riwayatBox}>
@@ -345,9 +351,6 @@ const styles = {
   msg: { color: "#94a3b8", fontSize: "14px", maxWidth: "280px", lineHeight: "1.5" },
   retryBtn: { padding: "14px 28px", borderRadius: "10px", border: "none", background: "#10b981", color: "#fff", fontSize: "16px", fontWeight: "600", cursor: "pointer" },
   hint: { textAlign: "center", color: "#64748b", fontSize: "14px", marginTop: "12px" },
-  debugBox: { background: "#1e293b", color: "#10b981", padding: "12px", borderRadius: "8px", marginTop: "12px", fontSize: "12px", fontFamily: "monospace" },
-  debugTitle: { fontWeight: "bold", marginBottom: "8px" },
-  debugToggle: { background: "#64748b", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", cursor: "pointer", marginTop: "8px" },
   riwayatBox: { background: "#fff", borderRadius: "12px", padding: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" },
   sectionTitle: { fontSize: "16px", fontWeight: "bold", color: "#0f172a", marginBottom: "12px" },
   empty: { textAlign: "center", color: "#94a3b8", padding: "24px" },
