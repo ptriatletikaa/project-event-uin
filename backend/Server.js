@@ -27,6 +27,20 @@ db.connect((err) => {
   else console.log("Database connected");
 });
 
+const runMigrations = () => {
+  db.query("ALTER TABLE invited_users DROP INDEX nim_nik", (err) => {
+    if (!err) console.log("Migration: Dropped nim_nik UNIQUE index");
+    db.query(
+      "ALTER TABLE invited_users ADD UNIQUE INDEX idx_nim_nik_event (nim_nik, event_id)",
+      (err2) => {
+        if (!err2) console.log("Migration: Added composite UNIQUE index (nim_nik, event_id)");
+      }
+    );
+  });
+};
+
+runMigrations();
+
 // =====================================================
 // TEST ENDPOINT
 // =====================================================
@@ -364,12 +378,15 @@ app.post("/api/events/:eventId/invited-users/bulk", (req, res) => {
         return res.status(400).json({ message: "Data tidak valid. Pastikan ada kolom Nama dan NIM/NIK" });
       }
 
-      db.query("INSERT INTO invited_users (nama, nim_nik, email, event_id, kategori, qr_code) VALUES ?", [invited], (err, result) => {
+      db.query("INSERT IGNORE INTO invited_users (nama, nim_nik, email, event_id, kategori, qr_code) VALUES ?", [invited], (err, result) => {
         if (err) {
-          if (err.code === "ER_DUP_ENTRY") return res.status(400).json({ message: "Beberapa NIM/NIK sudah terdaftar" });
+          console.error("Bulk import error:", err.message);
           return res.status(500).json({ message: "Server error" });
         }
-        res.status(201).json({ message: `Berhasil import ${result.affectedRows} undangan` });
+        const skipped = invited.length - result.affectedRows;
+        let msg = `Berhasil import ${result.affectedRows} undangan`;
+        if (skipped > 0) msg += ` (${skipped} duplikat dilewati)`;
+        res.status(201).json({ message: msg });
       });
     } catch (err) {
       return res.status(500).json({ message: "Gagal membaca file Excel" });
@@ -447,7 +464,11 @@ app.get("/api/events/:eventId/checkin-status", (req, res) => {
   db.query(
     `SELECT e.kapasitas, e.status as event_status,
      (SELECT COUNT(*) FROM invited_users WHERE event_id = e.id) as total_invited,
-     (SELECT COUNT(*) FROM invited_users WHERE event_id = e.id AND status_checkin = 'sudah') as total_checkin
+     (SELECT COUNT(*) FROM invited_users WHERE event_id = e.id AND status_checkin = 'sudah') as total_checkin,
+     (SELECT COUNT(*) FROM invited_users WHERE event_id = e.id AND kategori = 'VIP') as vip_total,
+     (SELECT COUNT(*) FROM invited_users WHERE event_id = e.id AND kategori = 'VIP' AND status_checkin = 'sudah') as vip_checkin,
+     (SELECT COUNT(*) FROM invited_users WHERE event_id = e.id AND kategori = 'Normal') as normal_total,
+     (SELECT COUNT(*) FROM invited_users WHERE event_id = e.id AND kategori = 'Normal' AND status_checkin = 'sudah') as normal_checkin
      FROM events e WHERE e.id = ?`,
     [req.params.eventId],
     (err, results) => {
@@ -461,7 +482,11 @@ app.get("/api/events/:eventId/checkin-status", (req, res) => {
         total_invited: data.total_invited,
         total_checkin: data.total_checkin,
         remaining_capacity: data.kapasitas - data.total_checkin,
-        percentage: data.total_invited > 0 ? Math.round((data.total_checkin / data.total_invited) * 100) : 0
+        percentage: data.total_invited > 0 ? Math.round((data.total_checkin / data.total_invited) * 100) : 0,
+        breakdown: {
+          VIP: { total: data.vip_total, checked_in: data.vip_checkin },
+          Normal: { total: data.normal_total, checked_in: data.normal_checkin }
+        }
       });
     }
   );
@@ -604,29 +629,36 @@ app.post("/api/undangan/login", (req, res) => {
     `SELECT iu.*, e.nama as event_nama, e.tanggal, e.waktu_mulai, e.waktu_selesai, e.status as event_status
      FROM invited_users iu
      JOIN events e ON iu.event_id = e.id
-     WHERE iu.nim_nik = ?`,
+     WHERE iu.nim_nik = ?
+     ORDER BY e.tanggal DESC, e.waktu_mulai DESC`,
     [nim_nik],
     (err, results) => {
       if (err) return res.status(500).json({ message: "Server error" });
       if (results.length === 0) return res.status(404).json({ message: "NIM/NIK tidak ditemukan" });
 
-      const invited = results[0];
+      const mapUser = (invited) => ({
+        id: invited.id,
+        nama: invited.nama,
+        nim_nik: invited.nim_nik,
+        email: invited.email,
+        event_id: invited.event_id,
+        event_nama: invited.event_nama,
+        tanggal: invited.tanggal,
+        waktu_mulai: invited.waktu_mulai,
+        waktu_selesai: invited.waktu_selesai,
+        event_status: invited.event_status,
+        kategori: invited.kategori,
+        status_checkin: invited.status_checkin,
+        qr_code: invited.qr_code
+      });
+
+      const activeEvent = results.find(r => r.event_status === 'active');
+      const invited_user = activeEvent ? mapUser(activeEvent) : mapUser(results[0]);
+      const all_events = results.map(mapUser);
+
       res.json({
-        invited_user: {
-          id: invited.id,
-          nama: invited.nama,
-          nim_nik: invited.nim_nik,
-          email: invited.email,
-          event_id: invited.event_id,
-          event_nama: invited.event_nama,
-          tanggal: invited.tanggal,
-          waktu_mulai: invited.waktu_mulai,
-          waktu_selesai: invited.waktu_selesai,
-          event_status: invited.event_status,
-          kategori: invited.kategori,
-          status_checkin: invited.status_checkin,
-          qr_code: invited.qr_code
-        }
+        invited_user,
+        all_events
       });
     }
   );
@@ -667,5 +699,18 @@ const initDefaultAdmin = async () => {
 };
 
 initDefaultAdmin();
+
+// =====================================================
+// ALL INVITED (SEMUA UNDANGAN)
+// =====================================================
+app.get("/api/all-invited", (req, res) => {
+  db.query(
+    "SELECT iu.*, e.nama as event_nama FROM invited_users iu LEFT JOIN events e ON iu.event_id = e.id ORDER BY iu.created_at DESC",
+    (err, results) => {
+      if (err) return res.status(500).json({ message: "Server error" });
+      res.json(results);
+    }
+  );
+});
 
 app.listen(5000, () => console.log("Server running on port 5000"));

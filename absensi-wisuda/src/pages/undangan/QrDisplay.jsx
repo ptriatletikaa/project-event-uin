@@ -4,6 +4,8 @@ import { QRCodeCanvas } from "qrcode.react";
 
 export default function QrDisplay() {
   const [undangan, setUndangan] = useState(null);
+  const [allEvents, setAllEvents] = useState([]);
+  const [selectedIdx, setSelectedIdx] = useState(0);
   const [qrData, setQrData] = useState("");
   const navigate = useNavigate();
 
@@ -14,9 +16,23 @@ export default function QrDisplay() {
       return;
     }
     const data = JSON.parse(stored);
+    const storedEvents = localStorage.getItem("undangan_events");
+    const events = storedEvents ? JSON.parse(storedEvents) : [data];
     setUndangan(data);
-    setQrData(data.qr_code || String(data.id));
+    setAllEvents(events);
+    const active = events.find(e => e.event_status === "active") || events[0];
+    const idx = events.indexOf(active);
+    setSelectedIdx(idx >= 0 ? idx : 0);
+    setQrData(active.qr_code || String(active.id));
   }, []);
+
+  useEffect(() => {
+    if (allEvents.length > 0 && allEvents[selectedIdx]) {
+      const ev = allEvents[selectedIdx];
+      setUndangan(ev);
+      setQrData(ev.qr_code || String(ev.id));
+    }
+  }, [selectedIdx, allEvents]);
 
   const handleDownload = () => {
     const canvas = document.getElementById("qr-code");
@@ -40,6 +56,7 @@ export default function QrDisplay() {
 
   const handleLogout = () => {
     localStorage.removeItem("undangan_user");
+    localStorage.removeItem("undangan_events");
     navigate("/undangan/login");
   };
 
@@ -57,6 +74,20 @@ export default function QrDisplay() {
             {undangan.tanggal} | {undangan.waktu_mulai} - {undangan.waktu_selesai}
           </p>
         </div>
+
+        {allEvents.length > 1 && (
+          <div style={styles.eventSelector}>
+            {allEvents.map((ev, idx) => (
+              <button
+                key={ev.id}
+                style={idx === selectedIdx ? styles.eventBtnActive : styles.eventBtn}
+                onClick={() => setSelectedIdx(idx)}
+              >
+                {ev.event_nama}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div style={styles.statusBox}>
           {undangan.status_checkin === "sudah" ? (
@@ -121,4 +152,7 @@ const styles = {
   normalBadge: { display: "inline-block", padding: "4px 14px", borderRadius: "20px", background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: "13px", fontWeight: "bold" },
   downloadBtn: { width: "100%", padding: "14px", borderRadius: "12px", border: "none", background: "#3b82f6", color: "#fff", fontSize: "15px", fontWeight: "bold", cursor: "pointer", marginBottom: "10px" },
   logoutBtn: { width: "100%", padding: "12px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.2)", background: "transparent", color: "#93c5fd", fontSize: "14px", cursor: "pointer" },
+  eventSelector: { display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "center", marginBottom: "16px" },
+  eventBtn: { padding: "6px 12px", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.2)", background: "rgba(255,255,255,0.1)", color: "#93c5fd", fontSize: "12px", cursor: "pointer" },
+  eventBtnActive: { padding: "6px 12px", borderRadius: "16px", border: "none", background: "#3b82f6", color: "#fff", fontSize: "12px", fontWeight: "bold", cursor: "pointer" },
 };

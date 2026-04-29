@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS event_admins (
 CREATE TABLE IF NOT EXISTS invited_users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nama VARCHAR(255) NOT NULL,
-    nim_nik VARCHAR(100) UNIQUE NOT NULL,
+    nim_nik VARCHAR(100) NOT NULL,
     email VARCHAR(255),
     event_id INT NOT NULL,
     kategori ENUM('VIP', 'Normal') DEFAULT 'Normal',
@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS invited_users (
     FOREIGN KEY (scanned_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_event_id (event_id),
     INDEX idx_nim_nik (nim_nik),
+    UNIQUE INDEX idx_nim_nik_event (nim_nik, event_id),
     INDEX idx_qr_code (qr_code),
     INDEX idx_status_checkin (status_checkin)
 );

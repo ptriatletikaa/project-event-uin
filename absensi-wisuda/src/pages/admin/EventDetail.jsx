@@ -127,6 +127,7 @@ export default function EventDetail() {
           <div style={styles.menuItem} onClick={() => navigate("/admin/dashboard")}>Dashboard</div>
           <div style={styles.menuItem} onClick={() => navigate("/admin/users")}>User Management</div>
           <div style={styles.menuItem} onClick={() => navigate("/admin/events")}>Event Management</div>
+          <div style={styles.menuItem} onClick={() => navigate("/admin/undangan")}>Undangan</div>
         </div>
       </aside>
 

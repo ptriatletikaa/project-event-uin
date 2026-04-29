@@ -16,7 +16,9 @@ export default function LoginUndangan() {
     try {
       const res = await api.post("/undangan/login", { nim_nik });
       const invitedUser = res.data.invited_user;
+      const allEvents = res.data.all_events || [invitedUser];
       localStorage.setItem("undangan_user", JSON.stringify(invitedUser));
+      localStorage.setItem("undangan_events", JSON.stringify(allEvents));
       navigate("/undangan/qr");
     } catch (err) {
       setError(err.response?.data?.message || "Login gagal. NIM/NIK tidak ditemukan.");

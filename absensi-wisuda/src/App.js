@@ -6,6 +6,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import EventManagement from "./pages/admin/EventManagement";
 import EventDetail from "./pages/admin/EventDetail";
+import UndanganList from "./pages/admin/UndanganList";
 
 import LoginLapangan from "./pages/lapangan/LoginLapangan";
 import ChangePassword from "./pages/lapangan/ChangePassword";
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/admin/users" element={<UserManagement />} />
           <Route path="/admin/events" element={<EventManagement />} />
           <Route path="/admin/events/:id" element={<EventDetail />} />
+          <Route path="/admin/undangan" element={<UndanganList />} />
 
           <Route path="/lapangan/login" element={<LoginLapangan />} />
           <Route path="/lapangan/change-password" element={<ChangePassword />} />

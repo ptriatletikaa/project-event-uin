@@ -73,7 +73,7 @@ export default function AdminDashboard() {
       value: stats.invited,
       icon: "📬",
       color: "#10b981",
-      onClick: () => navigate("/admin/events")
+      onClick: () => navigate("/admin/undangan")
     },
     {
       label: "Total Check-in",
@@ -100,6 +100,7 @@ export default function AdminDashboard() {
             { key: "dashboard", label: "Dashboard" },
             { key: "users", label: "User Management" },
             { key: "events", label: "Event Management" },
+            { key: "undangan", label: "Undangan" },
           ].map((item) => (
             <div
               key={item.key}
@@ -108,6 +109,7 @@ export default function AdminDashboard() {
                 setActiveMenu(item.key);
                 if (item.key === "users") navigate("/admin/users");
                 else if (item.key === "events") navigate("/admin/events");
+                else if (item.key === "undangan") navigate("/admin/undangan");
               }}
             >
               {item.label}
