@@ -13,6 +13,7 @@ export default function Scan() {
   const [riwayat, setRiwayat] = useState([]);
   const [notif, setNotif] = useState(null);
   const [notifType, setNotifType] = useState("success");
+  const [scanResult, setScanResult] = useState(null);
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraMessage, setCameraMessage] = useState("Memuat kamera...");
   const [loading, setLoading] = useState(true);
@@ -193,18 +194,21 @@ export default function Scan() {
       console.log("✅ Checkin response:", res.data);
 
       if (res.data.success) {
-        showNotification("✅ BERHASIL! " + res.data.message, "success");
+        scanningRef.current = false;
+        setScanResult({ type: "success", message: res.data.message, data: res.data.data });
         if (res.data.data) {
           setRiwayat(prev => [res.data.data, ...prev].slice(0, 10));
         }
         loadData();
       } else {
-        showNotification("❌ " + res.data.message, "error");
+        scanningRef.current = false;
+        setScanResult({ type: "error", message: res.data.message });
       }
     } catch (err) {
       console.error("❌ Checkin error:", err.response?.data);
       const msg = err.response?.data?.message || "QR tidak dikenali di sistem";
-      showNotification("❌ " + msg, "error");
+      scanningRef.current = false;
+      setScanResult({ type: "error", message: msg });
     }
 
     setTimeout(() => { lastQrRef.current = null; }, 3000);
@@ -213,6 +217,14 @@ export default function Scan() {
   const handleRetry = () => {
     cleanupCamera();
     startCamera();
+  };
+
+  const handleResumeScan = () => {
+    setScanResult(null);
+    lastQrRef.current = null;
+    if (cameraActiveRef.current) {
+      startScanning();
+    }
   };
 
   if (loading) {
@@ -272,6 +284,22 @@ export default function Scan() {
           {cameraOn && (
             <div style={styles.scanFrame}>
               <div style={styles.scanLine}></div>
+            </div>
+          )}
+
+          {scanResult && (
+            <div style={scanResult.type === "success" ? styles.resultOverlaySuccess : styles.resultOverlayError}>
+              <div style={styles.resultIcon}>{scanResult.type === "success" ? "✅" : "❌"}</div>
+              <div style={styles.resultMessage}>{scanResult.message}</div>
+              {scanResult.data && (
+                <div style={styles.resultInfo}>
+                  <div>{scanResult.data.nama}</div>
+                  <div style={styles.resultMeta}>{scanResult.data.nim_nik} | {scanResult.data.kategori}</div>
+                </div>
+              )}
+              <button style={styles.resumeBtn} onClick={handleResumeScan}>
+                Lanjut Scan
+              </button>
             </div>
           )}
 
@@ -362,4 +390,11 @@ const styles = {
   meta: { fontSize: "13px", color: "#64748b" },
   time: { fontSize: "13px", color: "#64748b" },
   notif: { position: "fixed", top: "20px", left: "50%", transform: "translateX(-50%)", padding: "18px 32px", borderRadius: "14px", color: "#fff", fontWeight: "bold", fontSize: "16px", display: "flex", alignItems: "center", gap: "12px", zIndex: 9999, boxShadow: "0 8px 32px rgba(0,0,0,0.3)", maxWidth: "90%", textAlign: "center", animation: "slideDown 0.3s ease" },
+  resultOverlaySuccess: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "linear-gradient(135deg, rgba(16,185,129,0.97) 0%, rgba(5,150,105,0.97) 50%, rgba(4,120,87,0.97) 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 10, borderRadius: "16px", padding: "32px 24px", textAlign: "center", animation: "fadeIn 0.3s ease" },
+  resultOverlayError: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, background: "linear-gradient(135deg, rgba(239,68,68,0.97) 0%, rgba(220,38,38,0.97) 50%, rgba(185,28,28,0.97) 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 10, borderRadius: "16px", padding: "32px 24px", textAlign: "center", animation: "fadeIn 0.3s ease" },
+  resultIcon: { fontSize: "72px", marginBottom: "16px", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.2))" },
+  resultMessage: { fontSize: "18px", fontWeight: "600", color: "rgba(255,255,255,0.95)", marginBottom: "16px", lineHeight: "1.5", letterSpacing: "0.3px" },
+  resultInfo: { background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", padding: "16px 28px", borderRadius: "14px", marginBottom: "24px", color: "#fff", border: "1px solid rgba(255,255,255,0.2)" },
+  resultMeta: { fontSize: "13px", fontWeight: "500", opacity: 0.85, marginTop: "6px", letterSpacing: "0.5px" },
+  resumeBtn: { padding: "14px 44px", borderRadius: "50px", border: "2px solid rgba(255,255,255,0.6)", background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", color: "#fff", fontSize: "16px", fontWeight: "600", cursor: "pointer", letterSpacing: "0.5px", transition: "all 0.2s ease", boxShadow: "0 4px 16px rgba(0,0,0,0.15)" },
 };
