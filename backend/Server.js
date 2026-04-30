@@ -378,7 +378,6 @@ app.post("/api/events/:eventId/invited-users/bulk", (req, res) => {
         return res.status(400).json({ message: "Data tidak valid. Pastikan ada kolom Nama dan NIM/NIK" });
       }
 
-<<<<<<< HEAD
       db.query("INSERT IGNORE INTO invited_users (nama, nim_nik, email, event_id, kategori, qr_code) VALUES ?", [invited], (err, result) => {
         if (err) {
           console.error("Bulk import error:", err.message);
@@ -388,14 +387,6 @@ app.post("/api/events/:eventId/invited-users/bulk", (req, res) => {
         let msg = `Berhasil import ${result.affectedRows} undangan`;
         if (skipped > 0) msg += ` (${skipped} duplikat dilewati)`;
         res.status(201).json({ message: msg });
-=======
-      db.query("INSERT INTO invited_users (nama, nim_nik, email, event_id, kategori, qr_code) VALUES ?", [invited], (err, result) => {
-        if (err) {
-          if (err.code === "ER_DUP_ENTRY") return res.status(400).json({ message: "Beberapa NIM/NIK sudah terdaftar" });
-          return res.status(500).json({ message: "Server error" });
-        }
-        res.status(201).json({ message: `Berhasil import ${result.affectedRows} undangan` });
->>>>>>> bf215053dc63580e31b6f91e321b7806546465f6
       });
     } catch (err) {
       return res.status(500).json({ message: "Gagal membaca file Excel" });
